@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning Testeurs / Observateurs — Rotation anti-exposition</title>
+<style>
+  :root{
+    --bg: #0f1720;
+    --panel: #161f2b;
+    --panel-2: #1c2733;
+    --border: #2a3644;
+    --text: #e7edf3;
+    --text-dim: #93a4b8;
+    --accent: #3fb6a8;
+    --accent-2: #6c8cff;
+    --faible: #1fa96b;
+    --faible-bg: rgba(31,169,107,0.14);
+    --eleve: #e0a72a;
+    --eleve-bg: rgba(224,167,42,0.14);
+    --critique: #e0503a;
+    --critique-bg: rgba(224,80,58,0.16);
+    --mono: 'SF Mono', 'Consolas', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size:14px;
+  }
+  header{
+    padding:20px 28px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+    background:linear-gradient(180deg, #131c26, #0f1720);
+  }
+  header h1{ font-size:19px; margin:0; letter-spacing:0.2px; font-weight:650;}
+  header .sub{ color:var(--text-dim); font-size:12.5px; margin-top:3px;}
+  header .titlewrap{display:flex; align-items:center; gap:12px;}
+  .badge-count{ display:flex; gap:8px; flex-wrap:wrap;}
+  .badge-count span{ background:var(--panel-2); border:1px solid var(--border); padding:5px 11px; border-radius:20px; font-size:12px; color:var(--text-dim);}
+  .badge-count b{ color:var(--text); font-weight:600;}
+
+  nav{ display:flex; gap:4px; padding:0 28px; border-bottom:1px solid var(--border); background:#0f1720; overflow-x:auto;}
+  nav button{
+    background:none; border:none; color:var(--text-dim); padding:13px 16px; font-size:13.5px;
+    cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; font-weight:500;
+  }
+  nav button:hover{ color:var(--text);}
+  nav button.active{ color:var(--accent); border-bottom-color:var(--accent);}
+
+  main{ padding:24px 28px 60px; max-width:1400px; margin:0 auto;}
+  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px 22px; margin-bottom:18px;}
+  .panel h2{ margin:0 0 4px; font-size:15.5px;}
+  .panel .desc{ color:var(--text-dim); font-size:12.5px; margin-bottom:14px;}
+  .row{ display:flex; gap:14px; flex-wrap:wrap;}
+  .row > .panel{ flex:1; min-width:280px;}
+
+  table{ border-collapse:collapse; width:100%; font-size:13px;}
+  th, td{ border:1px solid var(--border); padding:8px 10px; text-align:left; vertical-align:middle;}
+  th{ background:var(--panel-2); color:var(--text-dim); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:0.03em;}
+  tr:hover td{ background:rgba(255,255,255,0.02);}
+  .tbl-scroll{ overflow-x:auto;}
+
+  input[type=text], input[type=number], select{
+    background:#0f1720; border:1px solid var(--border); color:var(--text);
+    padding:7px 9px; border-radius:6px; font-size:13px; width:100%;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus{ outline:1px solid var(--accent);}
+  label{ font-size:12px; color:var(--text-dim); display:block; margin-bottom:4px;}
+  .field{ margin-bottom:10px;}
+
+  button.btn{
+    background:var(--accent); color:#06201c; border:none; padding:9px 16px; border-radius:7px;
+    font-size:13px; font-weight:600; cursor:pointer;
+  }
+  button.btn:hover{ filter:brightness(1.08);}
+  button.btn.secondary{ background:var(--panel-2); color:var(--text); border:1px solid var(--border);}
+  button.btn.danger{ background:var(--critique); color:#2a0a05;}
+  button.btn.small{ padding:5px 10px; font-size:12px;}
+
+  .pill{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11.5px; font-weight:700; letter-spacing:0.02em;}
+  .pill.faible{ background:var(--faible-bg); color:var(--faible);}
+  .pill.eleve{ background:var(--eleve-bg); color:var(--eleve);}
+  .pill.critique{ background:var(--critique-bg); color:var(--critique);}
+
+  .risk-cell{ font-weight:600;}
+  .risk-cell.faible{ background:var(--faible-bg); color:var(--faible);}
+  .risk-cell.eleve{ background:var(--eleve-bg); color:var(--eleve);}
+  .risk-cell.critique{ background:var(--critique-bg); color:var(--critique);}
+
+  .agent-testeur{ color:var(--accent-2); font-weight:600;}
+  .agent-observateur{ color:#c48be0; font-weight:600;}
+
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;}
+  .weektabs{ display:flex; gap:6px; margin-bottom:12px;}
+  .weektabs button{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text-dim);
+    padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12.5px; font-weight:600;
+  }
+  .weektabs button.active{ background:var(--accent); color:#06201c; border-color:var(--accent);}
+
+  .alert{ padding:12px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; border:1px solid; }
+  .alert.ok{ background:var(--faible-bg); border-color:var(--faible); color:var(--faible);}
+  .alert.warn{ background:var(--eleve-bg); border-color:var(--eleve); color:var(--eleve);}
+  .alert.bad{ background:var(--critique-bg); border-color:var(--critique); color:var(--critique);}
+
+  .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .grid-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  @media(max-width:800px){ .grid-2, .grid-3{ grid-template-columns:1fr;} }
+
+  .kpi{ text-align:center; padding:14px; background:var(--panel-2); border-radius:8px; border:1px solid var(--border);}
+  .kpi .num{ font-size:26px; font-weight:700; color:var(--accent);}
+  .kpi .lbl{ font-size:11.5px; color:var(--text-dim); margin-top:2px; text-transform:uppercase; letter-spacing:0.03em;}
+
+  .tag2e{ background:rgba(108,140,255,0.16); color:var(--accent-2); padding:2px 7px; border-radius:5px; font-size:10.5px; font-weight:700; margin-left:6px;}
+
+  .icon-btn{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:2px 6px;}
+  .icon-btn:hover{ color:var(--critique);}
+
+  .footer-note{ color:var(--text-dim); font-size:12px; text-align:center; margin-top:30px; line-height:1.6;}
+  code{ background:var(--panel-2); padding:1px 6px; border-radius:4px; font-family:var(--mono); font-size:12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titlewrap">
+    <div>
+      <h1>Planning Testeurs &amp; Observateurs</h1>
+      <div class="sub">Cycles de 4 semaines · exposition suivie sur 12 mois glissants</div>
+    </div>
+  </div>
+  <div class="badge-count" id="headerBadges"></div>
+</header>
+
+<nav id="tabNav">
+  <button data-tab="config" class="active">Configuration</button>
+  <button data-tab="generation">Génération</button>
+  <button data-tab="planning">Planning</button>
+  <button data-tab="exposition">Exposition &amp; KPIs</button>
+  <button data-tab="data">Export / Import</button>
+</nav>
+
+<main>
+
+  <!-- CONFIGURATION -->
+  <section id="tab-config">
+    <div class="panel">
+      <h2>Agents</h2>
+      <div class="desc">9 testeurs + 5 observateurs par défaut. Ajoutez, renommez ou supprimez librement.</div>
+      <div class="toolbar">
+        <button class="btn small" onclick="addAgent('Testeur')">+ Testeur</button>
+        <button class="btn small secondary" onclick="addAgent('Observateur')">+ Observateur</button>
+      </div>
+      <div class="tbl-scroll">
+        <table id="tblAgents"></table>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="panel">
+        <h2>Sites / Terminaux</h2>
+        <div class="desc">Remplacez par vos vrais sites quand vous les aurez. Le Terminal 2E est marqué car son volume passagers reste élevé de 21h à 24h (contrairement aux autres sites) — la rotation doit y être particulièrement soignée.</div>
+        <div class="toolbar">
+          <button class="btn small" onclick="addSite()">+ Site</button>
+        </div>
+        <div class="tbl-scroll"><table id="tblSites"></table></div>
+      </div>
+
+      <div class="panel">
+        <h2>Prestataires</h2>
+        <div class="desc">Chaque site est rattaché à un prestataire. Un même prestataire peut couvrir plusieurs sites.</div>
+        <div class="toolbar">
+          <button class="btn small" onclick="addPrestataire()">+ Prestataire</button>
+        </div>
+        <div class="tbl-scroll"><table id="tblPrestataires"></table></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Tranches horaires (référence)</h2>
+      <div class="desc">Volume passagers indicatif par créneau — utilisé pour information seulement. La génération répartit les missions à parts égales entre les 5 créneaux, quel que soit le volume, afin de garder un risque d'exposition faible.</div>
+      <div class="tbl-scroll"><table id="tblCreneaux"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>Seuils de risque d'exposition</h2>
+      <div class="desc">Repris de votre grille. Passages/site et missions/prestataire s'appliquent sur une fenêtre glissante de 12 mois ; le créneau horaire et la reconnaissance s'appliquent sur le cycle de 4 semaines en cours.</div>
+      <div class="tbl-scroll"><table id="tblSeuils"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2>Volume de missions</h2>
+      <div class="grid-2">
+        <div class="field">
+          <label>Missions par semaine — Testeur</label>
+          <input type="number" id="inMissionsTesteur" min="1" max="10">
+        </div>
+        <div class="field">
+          <label>Missions par semaine — Observateur</label>
+          <input type="number" id="inMissionsObs" min="1" max="10">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GENERATION -->
+  <section id="tab-generation" style="display:none;">
+    <div class="panel">
+      <h2>Générer un nouveau cycle de 4 semaines</h2>
+      <div class="desc">L'algorithme attribue à chaque agent, à chaque mission, le site le moins visité par lui <b>sur les 12 derniers mois</b> (et dont le prestataire est le moins sollicité par lui sur 12 mois), en faisant tourner les 5 créneaux horaires de façon égale sur le cycle. Chaque génération ajoute un nouveau cycle de 4 semaines à l'historique — les cycles précédents ne sont pas effacés, ils continuent de compter dans la fenêtre glissante de 12 mois.</div>
+      <div class="field" style="max-width:260px;">
+        <label>Date de début du nouveau cycle</label>
+        <input type="date" id="inStartDate">
+      </div>
+      <div class="toolbar">
+        <button class="btn" onclick="generateCycle()">Générer ce nouveau cycle</button>
+        <button class="btn danger" onclick="clearPlanning()">Vider tout l'historique</button>
+      </div>
+      <div id="genSummary"></div>
+      <div id="cyclesList"></div>
+    </div>
+  </section>
+
+  <!-- PLANNING -->
+  <section id="tab-planning" style="display:none;">
+    <div class="panel">
+      <h2>Planning détaillé</h2>
+      <div class="desc">Une ligne par mission. Vous pouvez réattribuer manuellement un site ou signaler un incident de reconnaissance directement dans le tableau.</div>
+      <div class="field" style="max-width:320px;">
+        <label>Cycle</label>
+        <select id="cycleSelect" onchange="setCycle(this.value)"></select>
+      </div>
+      <div class="weektabs" id="weekTabs"></div>
+      <div class="tbl-scroll"><table id="tblPlanning"></table></div>
+    </div>
+  </section>
+
+  <!-- EXPOSITION -->
+  <section id="tab-exposition" style="display:none;">
+    <div class="panel" id="alertZone"></div>
+    <div class="panel">
+      <h2>Risque d'exposition par agent</h2>
+      <div class="desc">Passages/site et missions/prestataire sont calculés sur une <b>fenêtre glissante de 12 mois</b> (comme votre grille). Le créneau le plus répété et la reconnaissance sont calculés sur le <b>cycle de 4 semaines le plus récent</b>.</div>
+      <div class="tbl-scroll"><table id="tblExposition"></table></div>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section id="tab-data" style="display:none;">
+    <div class="panel">
+      <h2>Export / Import JSON</h2>
+      <div class="desc">Pour partager le planning entre plusieurs managers sans backend commun : exportez un fichier JSON, envoyez-le, l'autre manager l'importe.</div>
+      <div class="toolbar">
+        <button class="btn" onclick="exportJSON()">Exporter le JSON</button>
+        <label class="btn secondary" style="cursor:pointer;">
+          Importer un JSON
+          <input type="file" accept=".json" onchange="importJSON(event)" style="display:none;">
+        </label>
+        <button class="btn danger" onclick="resetAll()">Réinitialiser tout</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Publier sur GitHub Pages</h2>
+      <div class="desc" style="line-height:1.7;">
+        1. Sur <code>github.com</code>, ouvrez votre dépôt (ou créez-en un nouveau, public).<br>
+        2. Cliquez <b>Add file → Upload files</b>, glissez ce fichier et renommez-le <code>index.html</code> (à la racine, ou dans un sous-dossier).<br>
+        3. Validez le commit (<b>Commit changes</b>).<br>
+        4. Allez dans <b>Settings → Pages</b>, section <b>Build and deployment</b> : choisissez la branche <code>main</code> et le dossier <code>/ (root)</code>, puis <b>Save</b>.<br>
+        5. Après 1–2 minutes, l'URL s'affiche en haut de cette même page (<code>https://votre-pseudo.github.io/nom-du-depot/</code>).<br>
+        6. Pour toute mise à jour : remplacez le fichier via <b>Add file → Upload files</b> à nouveau, ou éditez-le en ligne avec l'icône crayon.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="footer-note">Données stockées uniquement dans ce navigateur (localStorage). Utilisez l'export JSON pour synchroniser entre managers ou postes.</div>
+
+<script>
+"use strict";
+
+/* ---------- constantes ---------- */
+var LS_VER_KEY = "planning4s_ver";
+var LS_DATA_KEY = "planning4s_data";
+var CURRENT_VER = "2";
+
+var JOURS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+var CRENEAUX = [
+  {id:"c1", label:"06h–09h", volume:"Pic"},
+  {id:"c2", label:"09h–15h", volume:"Faible"},
+  {id:"c3", label:"15h–18h", volume:"Moyen"},
+  {id:"c4", label:"18h–21h", volume:"Pic"},
+  {id:"c5", label:"21h–24h", volume:"Faible (Élevé au Terminal 2E)"}
+];
+
+var RECON_LEVELS = [
+  {id:"aucun", label:"Aucun indice", risk:"faible"},
+  {id:"suspicion", label:"Suspicion / remarque indirecte", risk:"eleve"},
+  {id:"invalide", label:"Test invalidé — reconnu", risk:"critique"}
+];
+
+function defaultState(){
+  var agents = [];
+  for (var i=1;i<=9;i++){ agents.push({id:"a-t"+i, nom:"Testeur "+i, role:"Testeur"}); }
+  for (var j=1;j<=5;j++){ agents.push({id:"a-o"+j, nom:"Observateur "+j, role:"Observateur"}); }
+
+  var prestataires = [
+    {id:"p1", nom:"SERIS"},
+    {id:"p2", nom:"HUBSAFE"},
+    {id:"p3", nom:"WATCHOVER"}
+  ];
+
+  var sites = [
+    {id:"s1", nom:"Terminal 1A", prestataireId:"p1", special2E:false},
+    {id:"s2", nom:"Terminal 1B", prestataireId:"p1", special2E:false},
+    {id:"s3", nom:"Terminal 2A", prestataireId:"p1", special2E:false},
+    {id:"s4", nom:"Terminal 2B", prestataireId:"p2", special2E:false},
+    {id:"s5", nom:"Terminal 2C", prestataireId:"p2", special2E:false},
+    {id:"s6", nom:"Terminal 2D", prestataireId:"p2", special2E:false},
+    {id:"s7", nom:"Terminal 2E", prestataireId:"p2", special2E:true},
+    {id:"s8", nom:"Terminal 2F", prestataireId:"p3", special2E:false},
+    {id:"s9", nom:"Terminal 3", prestataireId:"p3", special2E:false},
+    {id:"s10", nom:"Zone Fret", prestataireId:"p3", special2E:false}
+  ];
+
+  var seuils = {
+    site:        {faible:2, eleve:4, action:"Rotation"},
+    prestataire: {faible:3, eleve:6, action:"Réaffectation"},
+    creneau:     {faible:25, eleve:50, action:"Changement de planning"}
+  };
+
+  return {
+    ver: CURRENT_VER,
+    agents: agents,
+    sites: sites,
+    prestataires: prestataires,
+    seuils: seuils,
+    missionsTesteur: 4,
+    missionsObs: 2,
+    cycles: [],
+    planning: []
+  };
+}
+
+var STATE = null;
+
+/* ---------- persistence ---------- */
+function saveState(){
+  try{
+    localStorage.setItem(LS_VER_KEY, CURRENT_VER);
+    localStorage.setItem(LS_DATA_KEY, JSON.stringify(STATE));
+  }catch(e){ console.error("Erreur de sauvegarde", e); }
+}
+
+function loadState(){
+  try{
+    var ver = localStorage.getItem(LS_VER_KEY);
+    if (ver === CURRENT_VER){
+      var raw = localStorage.getItem(LS_DATA_KEY);
+      if (raw){ return JSON.parse(raw); }
+    }
+  }catch(e){ console.error("Erreur de lecture", e); }
+  return defaultState();
+}
+
+/* ---------- helpers ---------- */
+function uid(prefix){ return prefix + "-" + Math.random().toString(36).slice(2,9); }
+function getSite(id){ for (var i=0;i<STATE.sites.length;i++){ if (STATE.sites[i].id===id) return STATE.sites[i]; } return null; }
+function getPrestataire(id){ for (var i=0;i<STATE.prestataires.length;i++){ if (STATE.prestataires[i].id===id) return STATE.prestataires[i]; } return null; }
+function getAgent(id){ for (var i=0;i<STATE.agents.length;i++){ if (STATE.agents[i].id===id) return STATE.agents[i]; } return null; }
+function getCreneau(id){ for (var i=0;i<CRENEAUX.length;i++){ if (CRENEAUX[i].id===id) return CRENEAUX[i]; } return null; }
+function shuffle(arr){
+  var a = arr.slice();
+  for (var i=a.length-1;i>0;i--){
+    var k = Math.floor(Math.random()*(i+1));
+    var tmp = a[i]; a[i]=a[k]; a[k]=tmp;
+  }
+  return a;
+}
+
+/* ---------- risk classification ---------- */
+function classify(value, seuil){
+  if (value <= seuil.faible) return "faible";
+  if (value <= seuil.eleve) return "eleve";
+  return "critique";
+}
+function riskLabel(r){
+  if (r==="faible") return "Faible";
+  if (r==="eleve") return "Élevé";
+  return "Critique";
+}
+
+/* ================= RENDER: HEADER ================= */
+function renderHeader(){
+  var nbT = STATE.agents.filter(function(a){return a.role==="Testeur";}).length;
+  var nbO = STATE.agents.filter(function(a){return a.role==="Observateur";}).length;
+  var nbSites = STATE.sites.length;
+  var nbMissions = STATE.planning.length;
+  var html = "";
+  html += "<span><b>"+nbT+"</b> testeurs</span>";
+  html += "<span><b>"+nbO+"</b> observateurs</span>";
+  html += "<span><b>"+nbSites+"</b> sites</span>";
+  html += "<span><b>"+nbMissions+"</b> missions générées</span>";
+  document.getElementById("headerBadges").innerHTML = html;
+}
+
+/* ================= RENDER: AGENTS ================= */
+function renderAgents(){
+  var rows = "<tr><th style='width:26px'></th><th>Nom</th><th style='width:150px'>Rôle</th><th style='width:60px'></th></tr>";
+  STATE.agents.forEach(function(a, idx){
+    var cls = a.role==="Testeur" ? "agent-testeur" : "agent-observateur";
+    rows += "<tr>";
+    rows += "<td>"+(idx+1)+"</td>";
+    rows += "<td><input type='text' value='"+escapeAttr(a.nom)+"' onchange='updateAgentName(\""+a.id+"\", this.value)'></td>";
+    rows += "<td><span class='"+cls+"'>"+a.role+"</span></td>";
+    rows += "<td><button class='icon-btn' onclick='removeAgent(\""+a.id+"\")' title='Supprimer'>✕</button></td>";
+    rows += "</tr>";
+  });
+  document.getElementById("tblAgents").innerHTML = rows;
+}
+function addAgent(role){
+  var n = STATE.agents.filter(function(a){return a.role===role;}).length + 1;
+  STATE.agents.push({id: uid("a"), nom: role+" "+n, role: role});
+  saveState(); renderAll();
+}
+function updateAgentName(id, val){
+  var a = getAgent(id); if (a){ a.nom = val; saveState(); renderHeader(); }
+}
+function removeAgent(id){
+  STATE.agents = STATE.agents.filter(function(a){return a.id!==id;});
+  STATE.planning = STATE.planning.filter(function(m){return m.agentId!==id;});
+  saveState(); renderAll();
+}
+
+/* ================= RENDER: SITES ================= */
+function renderSites(){
+  var rows = "<tr><th>Site</th><th style='width:180px'>Prestataire</th><th style='width:110px'>Terminal 2E</th><th style='width:50px'></th></tr>";
+  STATE.sites.forEach(function(s){
+    rows += "<tr>";
+    rows += "<td><input type='text' value='"+escapeAttr(s.nom)+"' onchange='updateSiteName(\""+s.id+"\", this.value)'>"+(s.special2E ? "<span class='tag2e'>volume élevé 21–24h</span>" : "")+"</td>";
+    rows += "<td><select onchange='updateSitePrest(\""+s.id+"\", this.value)'>";
+    STATE.prestataires.forEach(function(p){
+      rows += "<option value='"+p.id+"' "+(p.id===s.prestataireId?"selected":"")+">"+escapeHtml(p.nom)+"</option>";
+    });
+    rows += "</select></td>";
+    rows += "<td><input type='checkbox' "+(s.special2E?"checked":"")+" onchange='toggleSpecial2E(\""+s.id+"\", this.checked)'></td>";
+    rows += "<td><button class='icon-btn' onclick='removeSite(\""+s.id+"\")'>✕</button></td>";
+    rows += "</tr>";
+  });
+  document.getElementById("tblSites").innerHTML = rows;
+}
+function addSite(){
+  var n = STATE.sites.length+1;
+  var defaultPrest = STATE.prestataires.length ? STATE.prestataires[0].id : null;
+  STATE.sites.push({id: uid("s"), nom:"Site "+n, prestataireId: defaultPrest, special2E:false});
+  saveState(); renderAll();
+}
+function updateSiteName(id, val){ var s=getSite(id); if(s){ s.nom=val; saveState(); } }
+function updateSitePrest(id, val){ var s=getSite(id); if(s){ s.prestataireId=val; saveState(); } }
+function toggleSpecial2E(id, val){ var s=getSite(id); if(s){ s.special2E=val; saveState(); renderSites(); } }
+function removeSite(id){
+  STATE.sites = STATE.sites.filter(function(s){return s.id!==id;});
+  STATE.planning = STATE.planning.filter(function(m){return m.siteId!==id;});
+  saveState(); renderAll();
+}
+
+/* ================= RENDER: PRESTATAIRES ================= */
+function renderPrestataires(){
+  var rows = "<tr><th>Prestataire</th><th style='width:90px'>Sites</th><th style='width:50px'></th></tr>";
+  STATE.prestataires.forEach(function(p){
+    var nbSites = STATE.sites.filter(function(s){return s.prestataireId===p.id;}).length;
+    rows += "<tr>";
+    rows += "<td><input type='text' value='"+escapeAttr(p.nom)+"' onchange='updatePrestName(\""+p.id+"\", this.value)'></td>";
+    rows += "<td>"+nbSites+"</td>";
+    rows += "<td><button class='icon-btn' onclick='removePrestataire(\""+p.id+"\")'>✕</button></td>";
+    rows += "</tr>";
+  });
+  document.getElementById("tblPrestataires").innerHTML = rows;
+}
+function addPrestataire(){
+  var n = STATE.prestataires.length+1;
+  STATE.prestataires.push({id: uid("p"), nom:"Prestataire "+n});
+  saveState(); renderAll();
+}
+function updatePrestName(id, val){ var p=getPrestataire(id); if(p){ p.nom=val; saveState(); } }
+function removePrestataire(id){
+  var used = STATE.sites.some(function(s){return s.prestataireId===id;});
+  if (used){ alert("Ce prestataire est encore rattaché à au moins un site. Réassignez ces sites avant de le supprimer."); return; }
+  STATE.prestataires = STATE.prestataires.filter(function(p){return p.id!==id;});
+  saveState(); renderAll();
+}
+
+/* ================= RENDER: CRENEAUX (référence) ================= */
+function renderCreneaux(){
+  var rows = "<tr><th>Créneau</th><th>Volume passagers indicatif</th></tr>";
+  CRENEAUX.forEach(function(c){
+    rows += "<tr><td>"+c.label+"</td><td>"+c.volume+"</td></tr>";
+  });
+  document.getElementById("tblCreneaux").innerHTML = rows;
+}
+
+/* ================= RENDER: SEUILS ================= */
+function renderSeuils(){
+  var s = STATE.seuils;
+  var rows = "<tr><th>Critère</th><th style='width:130px'>Faible (≤)</th><th style='width:130px'>Élevé (≤)</th><th style='width:130px'>Critique (&gt;)</th><th>Action si Critique</th></tr>";
+
+  rows += "<tr><td>Passages sur un même site (4 semaines)</td>"+
+    "<td><input type='number' value='"+s.site.faible+"' onchange='updateSeuil(\"site\",\"faible\",this.value)'></td>"+
+    "<td><input type='number' value='"+s.site.eleve+"' onchange='updateSeuil(\"site\",\"eleve\",this.value)'></td>"+
+    "<td>"+(s.site.eleve+1)+"+</td><td>"+s.site.action+"</td></tr>";
+
+  rows += "<tr><td>Missions chez un même prestataire (4 semaines)</td>"+
+    "<td><input type='number' value='"+s.prestataire.faible+"' onchange='updateSeuil(\"prestataire\",\"faible\",this.value)'></td>"+
+    "<td><input type='number' value='"+s.prestataire.eleve+"' onchange='updateSeuil(\"prestataire\",\"eleve\",this.value)'></td>"+
+    "<td>"+(s.prestataire.eleve+1)+"+</td><td>"+s.prestataire.action+"</td></tr>";
+
+  rows += "<tr><td>Créneau horaire le plus répété (% des missions)</td>"+
+    "<td><input type='number' value='"+s.creneau.faible+"' onchange='updateSeuil(\"creneau\",\"faible\",this.value)'> %</td>"+
+    "<td><input type='number' value='"+s.creneau.eleve+"' onchange='updateSeuil(\"creneau\",\"eleve\",this.value)'> %</td>"+
+    "<td>&gt; "+s.creneau.eleve+" %</td><td>"+s.creneau.action+"</td></tr>";
+
+  rows += "<tr><td>Reconnaissance potentielle du testeur</td>"+
+    "<td>Aucun indice</td><td>Suspicion / remarque</td><td>Test invalidé</td><td>Retrait immédiat</td></tr>";
+
+  document.getElementById("tblSeuils").innerHTML = rows;
+}
+function updateSeuil(cat, level, val){
+  STATE.seuils[cat][level] = Number(val);
+  saveState(); renderSeuils(); renderExposition();
+}
+
+/* ================= DATES / FENÊTRE GLISSANTE 12 MOIS ================= */
+var DAY_MS = 24*60*60*1000;
+function addDays(dateStr, n){
+  var d = new Date(dateStr+"T00:00:00");
+  d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function defaultNextStartDate(){
+  if (STATE.cycles.length === 0){
+    // prochain lundi (ou aujourd'hui si lundi)
+    var today = new Date();
+    var day = today.getDay(); // 0=dim
+    var diff = (day===0) ? 1 : (day===1 ? 0 : 8-day);
+    var d = new Date(today.getTime() + diff*DAY_MS);
+    return d.toISOString().slice(0,10);
+  }
+  var last = STATE.cycles[STATE.cycles.length-1];
+  return addDays(last.startDate, 28); // juste après les 4 semaines précédentes
+}
+// missions dans une fenêtre glissante de 12 mois se terminant "aujourd'hui"
+function missionsFenetre12Mois(agentId){
+  var todayStr = new Date().toISOString().slice(0,10);
+  var windowStartStr = addDays(todayStr, -365);
+  return STATE.planning.filter(function(m){
+    return m.agentId===agentId && m.date >= windowStartStr && m.date <= addDays(todayStr, 365*2);
+  });
+}
+
+/* ================= GENERATION ================= */
+function generateCycle(){
+  if (STATE.sites.length === 0){ alert("Ajoutez au moins un site avant de générer un cycle."); return; }
+  if (STATE.prestataires.length === 0){ alert("Ajoutez au moins un prestataire avant de générer un cycle."); return; }
+
+  var startDate = document.getElementById("inStartDate").value;
+  if (!startDate){ alert("Choisissez une date de début pour ce cycle."); return; }
+
+  var cycleId = uid("cycle");
+  var missionCounter = STATE.planning.length + 1;
+  var cycleEndDate = addDays(startDate, 27);
+
+  STATE.agents.forEach(function(agent){
+    var missionsParSemaine = agent.role === "Testeur" ? STATE.missionsTesteur : STATE.missionsObs;
+
+    // on part de l'historique réel de l'agent sur les 12 mois glissants qui précèdent
+    // la fin de ce nouveau cycle, pour continuer la rotation sans repartir de zéro
+    var windowStart = addDays(cycleEndDate, -365);
+    var histo = STATE.planning.filter(function(m){
+      return m.agentId===agent.id && m.date >= windowStart && m.date < startDate;
+    });
+    var siteCount = {}, prestCount = {};
+    histo.forEach(function(m){
+      siteCount[m.siteId] = (siteCount[m.siteId]||0)+1;
+      var s = getSite(m.siteId);
+      if (s){ prestCount[s.prestataireId] = (prestCount[s.prestataireId]||0)+1; }
+    });
+
+    var creneauCycle = 0;
+
+    for (var week=1; week<=4; week++){
+      var joursDispo = shuffle([0,1,2,3,4,5,6]);
+      var nbMissions = Math.min(missionsParSemaine, 7);
+      var joursChoisis = joursDispo.slice(0, nbMissions).sort(function(a,b){return a-b;});
+
+      joursChoisis.forEach(function(jourIdx){
+        var creneau = CRENEAUX[creneauCycle % CRENEAUX.length];
+        creneauCycle++;
+
+        var candidats = shuffle(STATE.sites.slice());
+        candidats.sort(function(x,y){
+          var sx = siteCount[x.id] || 0;
+          var sy = siteCount[y.id] || 0;
+          if (sx !== sy) return sx - sy;
+          var px = prestCount[x.prestataireId] || 0;
+          var py = prestCount[y.prestataireId] || 0;
+          return px - py;
+        });
+        var site = candidats[0];
+
+        siteCount[site.id] = (siteCount[site.id]||0) + 1;
+        prestCount[site.prestataireId] = (prestCount[site.prestataireId]||0) + 1;
+
+        var missionDate = addDays(startDate, (week-1)*7 + jourIdx);
+
+        STATE.planning.push({
+          id: "m"+(missionCounter++),
+          cycleId: cycleId,
+          semaine: week,
+          jour: jourIdx,
+          date: missionDate,
+          agentId: agent.id,
+          creneauId: creneau.id,
+          siteId: site.id,
+          signalement: "aucun"
+        });
+      });
+    }
+  });
+
+  STATE.cycles.push({id: cycleId, startDate: startDate});
+  currentCycleId = cycleId;
+  currentWeek = 1;
+
+  saveState();
+  renderAll();
+  document.getElementById("genSummary").innerHTML =
+    "<div class='alert ok'>Cycle généré du "+formatDateFR(startDate)+" au "+formatDateFR(cycleEndDate)+". "+STATE.agents.length+" agents couverts. Consultez l'onglet « Exposition &amp; KPIs ».</div>";
+  document.getElementById("inStartDate").value = defaultNextStartDate();
+  switchTab("exposition");
+}
+
+function formatDateFR(iso){
+  var d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit", year:"numeric"});
+}
+
+function clearPlanning(){
+  if (!confirm("Vider tout l'historique de missions et tous les cycles ? Cette action est irréversible.")) return;
+  STATE.planning = [];
+  STATE.cycles = [];
+  currentCycleId = null;
+  saveState(); renderAll();
+  document.getElementById("genSummary").innerHTML = "";
+}
+
+function renderCyclesList(){
+  if (STATE.cycles.length === 0){
+    document.getElementById("cyclesList").innerHTML = "";
+    return;
+  }
+  var html = "<div class='desc' style='margin-top:14px; margin-bottom:6px;'>Cycles archivés :</div><div class='tbl-scroll'><table><tr><th>Début</th><th>Fin</th><th>Missions</th></tr>";
+  STATE.cycles.forEach(function(c){
+    var nb = STATE.planning.filter(function(m){return m.cycleId===c.id;}).length;
+    html += "<tr><td>"+formatDateFR(c.startDate)+"</td><td>"+formatDateFR(addDays(c.startDate,27))+"</td><td>"+nb+"</td></tr>";
+  });
+  html += "</table></div>";
+  document.getElementById("cyclesList").innerHTML = html;
+}
+
+/* ================= RENDER: PLANNING ================= */
+var currentWeek = 1;
+var currentCycleId = null;
+
+function renderCycleSelect(){
+  var sel = document.getElementById("cycleSelect");
+  if (STATE.cycles.length === 0){
+    sel.innerHTML = "<option value=''>Aucun cycle généré</option>";
+    return;
+  }
+  if (!currentCycleId || !STATE.cycles.some(function(c){return c.id===currentCycleId;})){
+    currentCycleId = STATE.cycles[STATE.cycles.length-1].id;
+  }
+  var html = "";
+  STATE.cycles.forEach(function(c){
+    html += "<option value='"+c.id+"' "+(c.id===currentCycleId?"selected":"")+">"+
+      formatDateFR(c.startDate)+" → "+formatDateFR(addDays(c.startDate,27))+"</option>";
+  });
+  sel.innerHTML = html;
+}
+function setCycle(cycleId){ currentCycleId = cycleId; currentWeek = 1; renderWeekTabs(); renderPlanningTable(); }
+
+function renderWeekTabs(){
+  var html = "";
+  for (var w=1; w<=4; w++){
+    html += "<button class='"+(w===currentWeek?"active":"")+"' onclick='setWeek("+w+")'>Semaine "+w+"</button>";
+  }
+  document.getElementById("weekTabs").innerHTML = html;
+}
+function setWeek(w){ currentWeek = w; renderWeekTabs(); renderPlanningTable(); }
+
+function renderPlanningTable(){
+  var missions = STATE.planning.filter(function(m){return m.cycleId===currentCycleId && m.semaine===currentWeek;});
+  missions.sort(function(a,b){
+    if (a.jour !== b.jour) return a.jour - b.jour;
+    var an = getAgent(a.agentId), bn = getAgent(b.agentId);
+    return (an?an.nom:"").localeCompare(bn?bn.nom:"");
+  });
+
+  var rows = "<tr><th>Date</th><th>Jour</th><th>Agent</th><th>Rôle</th><th>Créneau</th><th>Site</th><th>Prestataire</th><th style='width:180px'>Reconnaissance</th></tr>";
+
+  if (missions.length === 0){
+    rows += "<tr><td colspan='8' style='color:var(--text-dim); text-align:center; padding:20px;'>Aucune mission pour cette semaine — générez d'abord un cycle dans l'onglet « Génération ».</td></tr>";
+  }
+
+  missions.forEach(function(m){
+    var agent = getAgent(m.agentId);
+    var site = getSite(m.siteId);
+    var prest = site ? getPrestataire(site.prestataireId) : null;
+    var creneau = getCreneau(m.creneauId);
+    var cls = agent && agent.role==="Testeur" ? "agent-testeur" : "agent-observateur";
+
+    rows += "<tr>";
+    rows += "<td>"+formatDateFR(m.date)+"</td>";
+    rows += "<td>"+JOURS[m.jour]+"</td>";
+    rows += "<td>"+(agent?escapeHtml(agent.nom):"—")+"</td>";
+    rows += "<td><span class='"+cls+"'>"+(agent?agent.role:"—")+"</span></td>";
+    rows += "<td>"+(creneau?creneau.label:"—")+"</td>";
+    rows += "<td><select onchange='reassignSite(\""+m.id+"\", this.value)'>";
+    STATE.sites.forEach(function(s){
+      rows += "<option value='"+s.id+"' "+(s.id===m.siteId?"selected":"")+">"+escapeHtml(s.nom)+"</option>";
+    });
+    rows += "</select></td>";
+    rows += "<td>"+(prest?escapeHtml(prest.nom):"—")+"</td>";
+    rows += "<td><select onchange='setSignalement(\""+m.id+"\", this.value)'>";
+    RECON_LEVELS.forEach(function(r){
+      rows += "<option value='"+r.id+"' "+(r.id===m.signalement?"selected":"")+">"+r.label+"</option>";
+    });
+    rows += "</select></td>";
+    rows += "</tr>";
+  });
+
+  document.getElementById("tblPlanning").innerHTML = rows;
+}
+function reassignSite(missionId, siteId){
+  var m = STATE.planning.find(function(x){return x.id===missionId;});
+  if (m){ m.siteId = siteId; saveState(); renderExposition(); }
+}
+function setSignalement(missionId, val){
+  var m = STATE.planning.find(function(x){return x.id===missionId;});
+  if (m){ m.signalement = val; saveState(); renderExposition(); }
+}
+
+/* ================= EXPOSITION / KPIs ================= */
+function computeAgentStats(agent){
+  // --- fenêtre glissante 12 mois (se terminant aujourd'hui) : passages/site et missions/prestataire ---
+  var missions12 = missionsFenetre12Mois(agent.id);
+  var siteCounts = {}, prestCounts = {};
+  missions12.forEach(function(m){
+    siteCounts[m.siteId] = (siteCounts[m.siteId]||0)+1;
+    var site = getSite(m.siteId);
+    if (site){ prestCounts[site.prestataireId] = (prestCounts[site.prestataireId]||0)+1; }
+  });
+  var maxSite = 0, maxSiteId = null;
+  Object.keys(siteCounts).forEach(function(k){ if (siteCounts[k] > maxSite){ maxSite = siteCounts[k]; maxSiteId = k; } });
+  var maxPrest = 0, maxPrestId = null;
+  Object.keys(prestCounts).forEach(function(k){ if (prestCounts[k] > maxPrest){ maxPrest = prestCounts[k]; maxPrestId = k; } });
+  var siteObj = maxSiteId ? getSite(maxSiteId) : null;
+  var prestObj = maxPrestId ? getPrestataire(maxPrestId) : null;
+
+  // --- cycle le plus récent : créneau le plus répété + reconnaissance ---
+  var missionsCycle = [];
+  if (currentCycleId){
+    missionsCycle = STATE.planning.filter(function(m){return m.agentId===agent.id && m.cycleId===currentCycleId;});
+  }
+  var totalCycle = missionsCycle.length;
+  var creneauCounts = {};
+  var worstRecon = "aucun";
+  var reconOrder = {aucun:0, suspicion:1, invalide:2};
+  missionsCycle.forEach(function(m){
+    creneauCounts[m.creneauId] = (creneauCounts[m.creneauId]||0)+1;
+    if (reconOrder[m.signalement] > reconOrder[worstRecon]) worstRecon = m.signalement;
+  });
+  var maxCreneau = 0, maxCreneauId = null;
+  Object.keys(creneauCounts).forEach(function(k){ if (creneauCounts[k] > maxCreneau){ maxCreneau = creneauCounts[k]; maxCreneauId = k; } });
+  var creneauObj = maxCreneauId ? getCreneau(maxCreneauId) : null;
+
+  return {
+    total12: missions12.length,
+    totalCycle: totalCycle,
+    maxSite: maxSite, maxSiteNom: siteObj ? siteObj.nom : "—",
+    maxPrest: maxPrest, maxPrestNom: prestObj ? prestObj.nom : "—",
+    maxCreneauPct: totalCycle ? Math.round((maxCreneau/totalCycle)*1000)/10 : 0,
+    maxCreneauLabel: creneauObj ? creneauObj.label : "—",
+    recon: worstRecon
+  };
+}
+
+function renderExposition(){
+  var seuils = STATE.seuils;
+  var rows = "<tr><th>Agent</th><th>Rôle</th><th>Missions (12 mois)</th>"+
+    "<th>Max passages / site (12 mois)</th><th>Max missions / prestataire (12 mois)</th>"+
+    "<th>Créneau le + répété (cycle en cours)</th><th>Reconnaissance (cycle en cours)</th></tr>";
+
+  var alertCritique = 0, alertEleve = 0;
+
+  STATE.agents.forEach(function(agent){
+    var st = computeAgentStats(agent);
+    var rSite = classify(st.maxSite, seuils.site);
+    var rPrest = classify(st.maxPrest, seuils.prestataire);
+    var rCreneau = classify(st.maxCreneauPct, seuils.creneau);
+    var rRecon = RECON_LEVELS.find(function(r){return r.id===st.recon;}).risk;
+
+    [rSite, rPrest, rCreneau, rRecon].forEach(function(r){
+      if (r==="critique") alertCritique++;
+      else if (r==="eleve") alertEleve++;
+    });
+
+    var cls = agent.role==="Testeur" ? "agent-testeur" : "agent-observateur";
+
+    rows += "<tr>";
+    rows += "<td>"+escapeHtml(agent.nom)+"</td>";
+    rows += "<td><span class='"+cls+"'>"+agent.role+"</span></td>";
+    rows += "<td>"+st.total12+"</td>";
+    rows += "<td class='risk-cell "+rSite+"'>"+st.maxSite+" — "+escapeHtml(st.maxSiteNom)+" <span class='pill "+rSite+"'>"+riskLabel(rSite)+"</span></td>";
+    rows += "<td class='risk-cell "+rPrest+"'>"+st.maxPrest+" — "+escapeHtml(st.maxPrestNom)+" <span class='pill "+rPrest+"'>"+riskLabel(rPrest)+"</span></td>";
+    rows += "<td class='risk-cell "+rCreneau+"'>"+st.maxCreneauPct+" % — "+st.maxCreneauLabel+" <span class='pill "+rCreneau+"'>"+riskLabel(rCreneau)+"</span></td>";
+    rows += "<td class='risk-cell "+rRecon+"'>"+RECON_LEVELS.find(function(r){return r.id===st.recon;}).label+" <span class='pill "+rRecon+"'>"+riskLabel(rRecon)+"</span></td>";
+    rows += "</tr>";
+  });
+
+  document.getElementById("tblExposition").innerHTML = rows;
+
+  var alertHtml = "";
+  if (STATE.planning.length === 0){
+    alertHtml = "<div class='alert warn'>Aucun cycle généré pour le moment. Allez dans l'onglet « Génération ».</div>";
+  } else if (alertCritique > 0){
+    alertHtml = "<div class='alert bad'>"+alertCritique+" indicateur(s) en risque Critique détecté(s). Une action immédiate est recommandée (voir la colonne action des seuils).</div>";
+  } else if (alertEleve > 0){
+    alertHtml = "<div class='alert warn'>"+alertEleve+" indicateur(s) en risque Élevé. Le planning reste globalement acceptable, une vigilance est recommandée.</div>";
+  } else {
+    alertHtml = "<div class='alert ok'>Tous les agents sont en risque d'exposition Faible sur les 4 critères. Objectif atteint.</div>";
+  }
+  document.getElementById("alertZone").innerHTML = "<h2 style='margin-top:0;'>Synthèse</h2>" + alertHtml;
+}
+
+/* ================= EXPORT / IMPORT ================= */
+function exportJSON(){
+  var blob = new Blob([JSON.stringify(STATE, null, 2)], {type:"application/json"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url;
+  a.download = "planning-4-semaines-"+(new Date().toISOString().slice(0,10))+".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importJSON(evt){
+  var file = evt.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var data = JSON.parse(e.target.result);
+      if (!data.agents || !data.sites){ throw new Error("Format inattendu"); }
+      STATE = data;
+      STATE.ver = CURRENT_VER;
+      saveState();
+      renderAll();
+      alert("Import réussi.");
+    }catch(err){
+      alert("Fichier JSON invalide : " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = "";
+}
+function resetAll(){
+  if (!confirm("Réinitialiser toutes les données (agents, sites, planning) ? Cette action est irréversible.")) return;
+  STATE = defaultState();
+  saveState();
+  renderAll();
+}
+
+/* ================= UTIL ================= */
+function escapeHtml(str){
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function escapeAttr(str){
+  return String(str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+/* ================= TABS ================= */
+function switchTab(tab){
+  var sections = ["config","generation","planning","exposition","data"];
+  sections.forEach(function(s){
+    document.getElementById("tab-"+s).style.display = (s===tab) ? "block" : "none";
+  });
+  var btns = document.querySelectorAll("#tabNav button");
+  btns.forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-tab")===tab);
+  });
+  if (tab === "planning"){ renderCycleSelect(); renderWeekTabs(); renderPlanningTable(); }
+  if (tab === "generation"){ renderCyclesList(); }
+  if (tab === "exposition"){ renderExposition(); }
+}
+
+/* ================= INIT ================= */
+function renderAll(){
+  renderHeader();
+  renderAgents();
+  renderSites();
+  renderPrestataires();
+  renderCreneaux();
+  renderSeuils();
+  document.getElementById("inMissionsTesteur").value = STATE.missionsTesteur;
+  document.getElementById("inMissionsObs").value = STATE.missionsObs;
+  renderCyclesList();
+  renderCycleSelect();
+  renderWeekTabs();
+  renderPlanningTable();
+  renderExposition();
+}
+
+document.addEventListener("DOMContentLoaded", function(){
+  STATE = loadState();
+  if (!STATE.cycles){ STATE.cycles = []; } // sécurité si import d'un ancien JSON
+
+  document.getElementById("inMissionsTesteur").addEventListener("change", function(){
+    STATE.missionsTesteur = Number(this.value) || 1; saveState();
+  });
+  document.getElementById("inMissionsObs").addEventListener("change", function(){
+    STATE.missionsObs = Number(this.value) || 1; saveState();
+  });
+
+  document.querySelectorAll("#tabNav button").forEach(function(btn){
+    btn.addEventListener("click", function(){ switchTab(btn.getAttribute("data-tab")); });
+  });
+
+  document.getElementById("inStartDate").value = defaultNextStartDate();
+
+  renderAll();
+});
+</script>
+</body>
+</html>
