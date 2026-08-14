@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning Testeurs / Observateurs — Rotation anti-exposition</title>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#161f2b; --panel-2:#1c2733; --border:#2a3644;
+    --text:#e7edf3; --text-dim:#93a4b8;
+    --accent:#3fb6a8; --accent-2:#6c8cff; --violet:#c48be0;
+    --faible:#1fa96b; --faible-bg:rgba(31,169,107,0.14);
+    --eleve:#e0a72a; --eleve-bg:rgba(224,167,42,0.14);
+    --critique:#e0503a; --critique-bg:rgba(224,80,58,0.16);
+    --mono:'SF Mono','Consolas',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;}
+  header{padding:18px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;
+    justify-content:space-between;flex-wrap:wrap;gap:12px;background:linear-gradient(180deg,#131c26,#0f1720);}
+  header h1{font-size:19px;margin:0;letter-spacing:.2px;font-weight:650;}
+  header .sub{color:var(--text-dim);font-size:12.5px;margin-top:3px;}
+  .badge-count{display:flex;gap:8px;flex-wrap:wrap;}
+  .badge-count span{background:var(--panel-2);border:1px solid var(--border);padding:5px 11px;
+    border-radius:20px;font-size:12px;color:var(--text-dim);}
+  .badge-count b{color:var(--text);font-weight:600;}
+
+  nav{display:flex;gap:4px;padding:0 28px;border-bottom:1px solid var(--border);background:#0f1720;overflow-x:auto;}
+  nav button{background:none;border:none;color:var(--text-dim);padding:13px 16px;font-size:13.5px;
+    cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500;}
+  nav button:hover{color:var(--text);}
+  nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+  main{padding:22px 28px 60px;max-width:1440px;margin:0 auto;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+  .panel h2{margin:0 0 4px;font-size:15.5px;}
+  .panel h3{margin:16px 0 6px;font-size:13.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;}
+  .panel .desc{color:var(--text-dim);font-size:12.5px;margin-bottom:14px;line-height:1.55;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .row>.panel{flex:1;min-width:300px;}
+
+  table{border-collapse:collapse;width:100%;font-size:13px;}
+  th,td{border:1px solid var(--border);padding:7px 9px;text-align:left;vertical-align:middle;}
+  th{background:var(--panel-2);color:var(--text-dim);font-weight:600;font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.03em;}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .tbl-scroll{overflow-x:auto;}
+  th.hdr-faible{background:var(--faible-bg);color:var(--faible);}
+  th.hdr-eleve{background:var(--eleve-bg);color:var(--eleve);}
+  th.hdr-critique{background:var(--critique-bg);color:var(--critique);}
+
+  input[type=text],input[type=number],input[type=date],select{
+    background:#0f1720;border:1px solid var(--border);color:var(--text);
+    padding:7px 9px;border-radius:6px;font-size:13px;width:100%;}
+  input:focus,select:focus{outline:1px solid var(--accent);}
+  label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;}
+  .field{margin-bottom:10px;}
+  .check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);margin-bottom:8px;}
+  .check input{width:auto;}
+
+  button.btn{background:var(--accent);color:#06201c;border:none;padding:9px 16px;border-radius:7px;
+    font-size:13px;font-weight:600;cursor:pointer;}
+  button.btn:hover{filter:brightness(1.08);}
+  button.btn.secondary{background:var(--panel-2);color:var(--text);border:1px solid var(--border);}
+  button.btn.danger{background:var(--critique);color:#2a0a05;}
+  button.btn.small{padding:5px 10px;font-size:12px;}
+
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+  .pill.faible{background:var(--faible-bg);color:var(--faible);}
+  .pill.eleve{background:var(--eleve-bg);color:var(--eleve);}
+  .pill.critique{background:var(--critique-bg);color:var(--critique);}
+  .risk-cell.faible{background:var(--faible-bg);color:var(--faible);font-weight:600;}
+  .risk-cell.eleve{background:var(--eleve-bg);color:var(--eleve);font-weight:600;}
+  .risk-cell.critique{background:var(--critique-bg);color:var(--critique);font-weight:600;}
+
+  .agent-testeur{color:var(--accent-2);font-weight:600;}
+  .agent-observateur{color:var(--violet);font-weight:600;}
+  .roleT{background:rgba(108,140,255,.16);color:var(--accent-2);padding:1px 6px;border-radius:4px;
+    font-size:10px;font-weight:700;}
+  .roleO{background:rgba(196,139,224,.16);color:var(--violet);padding:1px 6px;border-radius:4px;
+    font-size:10px;font-weight:700;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .weektabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+  .weektabs button{background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);
+    padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:600;}
+  .weektabs button.active{background:var(--accent);color:#06201c;border-color:var(--accent);}
+
+  .alert{padding:11px 13px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid;line-height:1.55;}
+  .alert.ok{background:var(--faible-bg);border-color:var(--faible);color:var(--faible);}
+  .alert.warn{background:var(--eleve-bg);border-color:var(--eleve);color:var(--eleve);}
+  .alert.bad{background:var(--critique-bg);border-color:var(--critique);color:var(--critique);}
+  .alert.info{background:rgba(108,140,255,.1);border-color:var(--accent-2);color:#a8bcff;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  @media(max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
+
+  .kpi{text-align:center;padding:13px;background:var(--panel-2);border-radius:8px;border:1px solid var(--border);}
+  .kpi .num{font-size:24px;font-weight:700;color:var(--accent);}
+  .kpi .num.warn{color:var(--eleve);} .kpi .num.bad{color:var(--critique);}
+  .kpi .lbl{font-size:11px;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.03em;}
+
+  .tagnuit{background:rgba(224,167,42,.16);color:var(--eleve);padding:2px 7px;border-radius:5px;
+    font-size:10.5px;font-weight:700;margin-left:6px;}
+  .icon-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:2px 6px;}
+  .icon-btn:hover{color:var(--critique);}
+
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal .head{font-size:11px;color:var(--text-dim);text-transform:uppercase;text-align:center;padding:4px 0;letter-spacing:.04em;}
+  .cal .day{background:var(--panel-2);border:1px solid var(--border);border-radius:7px;padding:6px;min-height:78px;}
+  .cal .day.off{opacity:.35;}
+  .cal .dnum{font-size:10.5px;color:var(--text-dim);margin-bottom:4px;}
+  .cal .mi{background:#0f1720;border:1px solid var(--border);border-radius:5px;padding:4px 5px;
+    margin-bottom:4px;font-size:10.5px;line-height:1.35;}
+  .cal .mi .cre{color:var(--accent);font-weight:700;}
+  .cal .mi .st{color:var(--text-dim);display:block;}
+  @media(max-width:900px){.cal{grid-template-columns:1fr;} .cal .head{display:none;}}
+
+  .bar{height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden;min-width:60px;}
+  .bar > i{display:block;height:100%;background:var(--accent);}
+  .footer-note{color:var(--text-dim);font-size:12px;text-align:center;margin-top:30px;line-height:1.6;}
+  code{background:var(--panel-2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;}
+  .mono{font-family:var(--mono);}
+  ul.tight{margin:6px 0 0;padding-left:18px;line-height:1.7;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Planning Testeurs &amp; Observateurs</h1>
+    <div class="sub">Cycle de 4 semaines · exposition site &amp; prestataire suivie sur 12 mois glissants</div>
+  </div>
+  <div class="badge-count" id="headerBadges"></div>
+</header>
+
+<nav id="tabNav">
+  <button data-tab="config" class="active">Configuration</button>
+  <button data-tab="capacite">Capacité</button>
+  <button data-tab="generation">Génération</button>
+  <button data-tab="planning">Planning</button>
+  <button data-tab="exposition">Exposition &amp; KPIs</button>
+  <button data-tab="controles">Contrôles</button>
+  <button data-tab="data">Export / Import</button>
+</nav>
+
+<main>
+
+<!-- ============ CONFIGURATION ============ -->
+<section id="tab-config">
+  <div class="panel">
+    <h2>Règles appliquées par le générateur</h2>
+    <div class="desc">Ces cinq règles sont des contraintes <b>dures</b> : une mission qui les violerait n'est jamais créée.</div>
+    <ul class="tight" style="font-size:13px;color:var(--text);">
+      <li>Un agent ne peut appartenir qu'à <b>un seul binôme par jour</b> (donc jamais deux duos différents le même jour).</li>
+      <li>Un binôme reste sur <b>un seul site pour toute la journée</b>.</li>
+      <li>Chaque mission comporte exactement <b>1 testeur + 1 observateur</b> ; le rôle est figé le jour même.</li>
+      <li>Le rôle attribué respecte la qualification de l'agent (testeur, observateur, ou polyvalent).</li>
+      <li>En mode strict, aucune affectation ne fait franchir le seuil <span class="pill faible">Faible</span> sur les passages/site ou les missions/prestataire (12 mois glissants).</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h2>Agents</h2>
+    <div class="desc">Par défaut 9 agents de profil testeur et 5 de profil observateur. La case <b>Polyvalent</b> autorise la bascule d'un rôle à l'autre d'une mission à l'autre — c'est elle qui permet la rotation des rôles demandée. Un agent non polyvalent ne prendra jamais que son rôle de profil.</div>
+    <div class="toolbar">
+      <button class="btn small" onclick="addAgent()">+ Agent</button>
+      <button class="btn small secondary" onclick="setAllPolyvalent(true)">Tout polyvalent</button>
+      <button class="btn small secondary" onclick="setAllPolyvalent(false)">Aucun polyvalent</button>
+    </div>
+    <div id="agentFeasibility"></div>
+    <div class="tbl-scroll"><table id="tblAgents"></table></div>
+  </div>
+
+  <div class="row">
+    <div class="panel">
+      <h2>Sites / Terminaux</h2>
+      <div class="desc">Cochez <b>Nuit</b> pour les sites dont le volume passagers reste élevé de 21h à 24h (Terminal 2E par ex.).</div>
+      <div class="toolbar"><button class="btn small" onclick="addSite()">+ Site</button></div>
+      <div class="tbl-scroll"><table id="tblSites"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Prestataires</h2>
+      <div class="desc">Chaque site est rattaché à un prestataire ; un prestataire peut couvrir plusieurs sites. <b>Le nombre de prestataires est le facteur limitant n°1</b> du volume de missions possible — voir l'onglet Capacité.</div>
+      <div class="toolbar"><button class="btn small" onclick="addPrestataire()">+ Prestataire</button></div>
+      <div class="tbl-scroll"><table id="tblPrestataires"></table></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Grille de risque d'exposition</h2>
+    <div class="desc">Reprise de votre grille. Les deux premiers critères sont mesurés sur une <b>fenêtre glissante de 12 mois</b>, le créneau et la reconnaissance sur le cycle de 4 semaines en cours.</div>
+    <div class="tbl-scroll"><table id="tblSeuils"></table></div>
+  </div>
+
+  <div class="row">
+    <div class="panel">
+      <h2>Volume &amp; jours d'activité</h2>
+      <div class="grid-2" style="max-width:520px;">
+        <div class="field">
+          <label>Missions par cycle de 4 semaines (équipe entière)</label>
+          <input type="number" id="inMissionsCycle" min="1" max="200">
+        </div>
+        <div class="field">
+          <label>Fenêtre du critère « créneau répété »</label>
+          <select id="inFenetreCreneau">
+            <option value="12mois">12 mois glissants (recommandé)</option>
+            <option value="cycle">Cycle en cours</option>
+          </select>
+        </div>
+      </div>
+      <div class="desc" id="creneauQuotaHint"></div>
+      <label style="margin-bottom:6px;">Jours d'activité</label>
+      <div id="joursActifs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <div class="check">
+        <input type="checkbox" id="inNuitReserve">
+        <label for="inNuitReserve" style="margin:0;">Réserver le créneau 21h–24h aux sites à activité nocturne</label>
+      </div>
+      <div class="check">
+        <input type="checkbox" id="inModeStrict">
+        <label for="inModeStrict" style="margin:0;">Mode strict — ne jamais dépasser le seuil Faible (quitte à planifier moins de missions)</label>
+      </div>
+      <div class="check">
+        <input type="checkbox" id="inAnonymise">
+        <label for="inAnonymise" style="margin:0;">Affichage anonymisé (codes agents au lieu des noms)</label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Pondération de l'exposition</h2>
+      <div class="desc">Votre grille compte des passages bruts : laissez <b>1 / 1</b> pour rester fidèle à la grille. Si vous estimez que le rôle observateur expose moins (pas d'interaction directe avec l'agent de sûreté contrôlé), baissez son poids — l'outil recalcule tout, seuils compris.</div>
+      <div class="grid-2">
+        <div class="field"><label>Poids — Testeur</label><input type="number" id="inPoidsTesteur" min="0" max="2" step="0.1"></div>
+        <div class="field"><label>Poids — Observateur</label><input type="number" id="inPoidsObservateur" min="0" max="2" step="0.1"></div>
+      </div>
+      <h3>Tranches horaires</h3>
+      <div class="tbl-scroll"><table id="tblCreneaux"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CAPACITE ============ -->
+<section id="tab-capacite" style="display:none;">
+  <div class="panel">
+    <h2>Capacité annuelle compatible avec un risque Faible</h2>
+    <div class="desc">Le calcul est purement arithmétique : sur 12 mois glissants, un agent ne peut pas dépasser le seuil Faible sur chacun de vos sites, ni sur chacun de vos prestataires. Le plus contraignant des deux plafonne son nombre total de missions.</div>
+    <div id="capaKpis" class="grid-4" style="margin-bottom:14px;"></div>
+    <div id="capaDetail"></div>
+  </div>
+  <div class="panel">
+    <h2>Simulateur de leviers</h2>
+    <div class="desc">Les trois seuls leviers pour augmenter le volume de missions sans sortir du risque Faible.</div>
+    <div class="tbl-scroll"><table id="tblLeviers"></table></div>
+  </div>
+</section>
+
+<!-- ============ GENERATION ============ -->
+<section id="tab-generation" style="display:none;">
+  <div class="panel">
+    <h2>Générer un cycle de 4 semaines</h2>
+    <div class="desc">L'algorithme construit le planning <b>jour par jour</b> : il forme les binômes les moins déjà appariés, fige un rôle par agent, attribue un créneau pris dans le quota individuel (répartition égale sur les 5 tranches), puis choisit le site le moins exposé pour les deux membres sur les 12 derniers mois. Chaque génération s'ajoute à l'historique et compte dans la fenêtre glissante.</div>
+    <div class="grid-2" style="max-width:640px;">
+      <div class="field"><label>Date de début (un lundi de préférence)</label><input type="date" id="inStartDate"></div>
+      <div class="field"><label>Graine aléatoire (même graine = même planning)</label><input type="number" id="inSeed" min="1"></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" onclick="generateCycle()">Générer ce cycle</button>
+      <button class="btn secondary" onclick="regenSeed()">Nouvelle graine</button>
+      <button class="btn danger" onclick="clearPlanning()">Vider tout l'historique</button>
+    </div>
+    <div id="genWarn"></div>
+    <div id="genSummary"></div>
+    <div id="cyclesList"></div>
+  </div>
+</section>
+
+<!-- ============ PLANNING ============ -->
+<section id="tab-planning" style="display:none;">
+  <div class="panel">
+    <div class="toolbar" style="justify-content:space-between;">
+      <div style="min-width:280px;flex:1;max-width:360px;">
+        <label>Cycle</label>
+        <select id="cycleSelect" onchange="setCycle(this.value)"></select>
+      </div>
+      <div>
+        <button class="btn small secondary" onclick="setView('cal')" id="btnViewCal">Vue calendrier</button>
+        <button class="btn small secondary" onclick="setView('tbl')" id="btnViewTbl">Vue tableau</button>
+        <button class="btn small secondary" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div class="weektabs" id="weekTabs"></div>
+    <div id="calWrap"></div>
+    <div class="tbl-scroll" id="tblWrap"><table id="tblPlanning"></table></div>
+  </div>
+</section>
+
+<!-- ============ EXPOSITION ============ -->
+<section id="tab-exposition" style="display:none;">
+  <div class="panel" id="alertZone"></div>
+  <div class="panel">
+    <h2>Risque d'exposition par agent</h2>
+    <div class="desc">Passages/site et missions/prestataire : <b>12 mois glissants</b> se terminant à la fin du cycle sélectionné. Créneau le plus répété et reconnaissance : <b>cycle sélectionné</b>.</div>
+    <div class="tbl-scroll"><table id="tblExposition"></table></div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h2>Répartition par tranche horaire</h2>
+      <div class="desc">Objectif : 20 % par créneau (5 créneaux à parts égales), donc strictement sous le seuil de 25 %.</div>
+      <div class="tbl-scroll"><table id="tblCreneauDist"></table></div>
+    </div>
+    <div class="panel">
+      <h2>Rotation des rôles</h2>
+      <div class="desc">Nombre de fois où chaque agent a été testeur puis observateur, sur tout l'historique.</div>
+      <div class="tbl-scroll"><table id="tblRoles"></table></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Charge par site (cycle sélectionné)</h2>
+    <div class="tbl-scroll"><table id="tblSiteLoad"></table></div>
+  </div>
+</section>
+
+<!-- ============ CONTROLES ============ -->
+<section id="tab-controles" style="display:none;">
+  <div class="panel">
+    <h2>Contrôles de cohérence</h2>
+    <div class="desc">Vérification automatique du cycle sélectionné. Tout doit être au vert avant diffusion du planning.</div>
+    <div class="tbl-scroll"><table id="tblControles"></table></div>
+  </div>
+  <div class="panel">
+    <h2>Matrice des binômes (historique complet)</h2>
+    <div class="desc">Nombre de fois où chaque paire d'agents a travaillé ensemble. Une matrice plate = anonymat mieux protégé : aucun duo récurrent identifiable.</div>
+    <div class="tbl-scroll"><table id="tblPairs"></table></div>
+  </div>
+</section>
+
+<!-- ============ DATA ============ -->
+<section id="tab-data" style="display:none;">
+  <div class="panel">
+    <h2>Export / Import JSON</h2>
+    <div class="desc">Pour partager le planning entre managers sans backend : exportez, envoyez, l'autre importe. Attention : l'export contient les noms réels des agents.</div>
+    <div class="toolbar">
+      <button class="btn" onclick="exportJSON()">Exporter le JSON</button>
+      <label class="btn secondary" style="cursor:pointer;">Importer un JSON
+        <input type="file" accept=".json" onchange="importJSON(event)" style="display:none;"></label>
+      <button class="btn secondary" onclick="exportCSV()">Exporter le planning CSV</button>
+      <button class="btn danger" onclick="resetAll()">Réinitialiser tout</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Publier sur GitHub Pages</h2>
+    <div class="desc" style="line-height:1.8;">
+      1. Sur <code>github.com</code>, ouvrez un dépôt public (ou créez-en un).<br>
+      2. <b>Add file → Upload files</b>, déposez ce fichier renommé <code>index.html</code>.<br>
+      3. <b>Commit changes</b>.<br>
+      4. <b>Settings → Pages</b> → branche <code>main</code>, dossier <code>/ (root)</code> → <b>Save</b>.<br>
+      5. L'URL <code>https://votre-pseudo.github.io/nom-du-depot/</code> apparaît après 1–2 minutes.<br><br>
+      <b>Avant publication :</b> videz l'historique et laissez les noms génériques « Agent 1… » — le dépôt étant public, aucun nom réel ni site sensible ne doit y figurer. Les données saisies restent de toute façon dans le navigateur de chaque utilisateur (localStorage), jamais sur GitHub.
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="footer-note">Données stockées uniquement dans ce navigateur (localStorage). Utilisez l'export JSON pour synchroniser entre postes.</div>
+<script>
+"use strict";
+
+/* =========================================================
+   CONSTANTES
+   ========================================================= */
+var LS_VER_KEY = "planning4s_ver";
+var LS_DATA_KEY = "planning4s_data";
+var CURRENT_VER = "5";
+
+var JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+var JOURS_C = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+var CRENEAUX = [
+  {id:"c1", label:"06h–09h", volume:"Pic"},
+  {id:"c2", label:"09h–15h", volume:"Faible"},
+  {id:"c3", label:"15h–18h", volume:"Moyen"},
+  {id:"c4", label:"18h–21h", volume:"Pic"},
+  {id:"c5", label:"21h–24h", volume:"Faible — sauf sites à activité nocturne (2E)"}
+];
+
+var RECON_LEVELS = [
+  {id:"aucun",     label:"Aucun indice",                    risk:"faible"},
+  {id:"suspicion", label:"Suspicion / remarque indirecte",  risk:"eleve"},
+  {id:"invalide",  label:"Test invalidé — testeur reconnu", risk:"critique"}
+];
+
+/* =========================================================
+   ETAT PAR DEFAUT
+   ========================================================= */
+function defaultState(){
+  var agents = [];
+  var i;
+  for (i=1;i<=9;i++){  agents.push({id:"a"+i, nom:"Agent "+i, code:"T-"+pad2(i), profil:"testeur",     polyvalent:true}); }
+  for (i=1;i<=5;i++){  agents.push({id:"b"+i, nom:"Agent "+(9+i), code:"O-"+pad2(i), profil:"observateur", polyvalent:true}); }
+
+  var prestataires = [
+    {id:"p1", nom:"Prestataire A"},
+    {id:"p2", nom:"Prestataire B"},
+    {id:"p3", nom:"Prestataire C"}
+  ];
+
+  var sites = [
+    {id:"s1",  nom:"Orly 1",                     prestataireId:"p2", nuit:false},
+    {id:"s2",  nom:"Orly 2",                     prestataireId:"p3", nuit:false},
+    {id:"s3",  nom:"Orly 3",                     prestataireId:"p3", nuit:false},
+    {id:"s4",  nom:"Orly 4",                     prestataireId:"p2", nuit:false},
+    {id:"s5",  nom:"CDG Terminal 1-3",           prestataireId:"p2", nuit:false},
+    {id:"s6",  nom:"CDG Terminal 2 AC / 2 BD",   prestataireId:"p2", nuit:false},
+    {id:"s7",  nom:"CDG Terminal 2E",            prestataireId:"p3", nuit:true},
+    {id:"s8",  nom:"CDG Terminal 2F",            prestataireId:"p1", nuit:false},
+    {id:"s9",  nom:"CDG Terminal 2G",            prestataireId:"p1", nuit:false},
+    {id:"s10", nom:"CDG Terminal T2EF",          prestataireId:"p1", nuit:true},
+    {id:"s11", nom:"CDG HUB",                    prestataireId:"p1", nuit:false},
+    {id:"s12", nom:"CDGU",                       prestataireId:"p2", nuit:false},
+    {id:"s13", nom:"ECP",                        prestataireId:"p1", nuit:false},
+    {id:"s14", nom:"LBG",                        prestataireId:"p1", nuit:false},
+    {id:"s15", nom:"Hors aérogares",             prestataireId:"p2", nuit:false},
+    {id:"s16", nom:"CDG Base Bus",               prestataireId:"p1", nuit:false}
+  ];
+
+  return {
+    ver: CURRENT_VER,
+    agents: agents,
+    sites: sites,
+    prestataires: prestataires,
+    seuils: {
+      site:        {faible:2,  eleve:4,  action:"Rotation"},
+      prestataire: {faible:3,  eleve:6,  action:"Réaffectation"},
+      creneau:     {faible:25, eleve:50, action:"Changement de planning"}
+    },
+    missionsParCycle: 35,
+    fenetreCreneau: "12mois",
+    joursActifs: [true,true,true,true,true,true,true],
+    poidsTesteur: 1,
+    poidsObservateur: 1,
+    modeStrict: true,
+    nuitReserve: false,
+    anonymise: false,
+    seed: 20260814,
+    cycles: [],
+    planning: []
+  };
+}
+
+var STATE = null;
+function pad2(n){ return (n<10?"0":"")+n; }
+
+/* =========================================================
+   PERSISTENCE
+   ========================================================= */
+function saveState(){
+  try{
+    localStorage.setItem(LS_VER_KEY, CURRENT_VER);
+    localStorage.setItem(LS_DATA_KEY, JSON.stringify(STATE));
+  }catch(e){ console.error("Erreur de sauvegarde", e); }
+}
+function loadState(){
+  try{
+    if (localStorage.getItem(LS_VER_KEY) === CURRENT_VER){
+      var raw = localStorage.getItem(LS_DATA_KEY);
+      if (raw) return migrate(JSON.parse(raw));
+    }
+  }catch(e){ console.error("Erreur de lecture", e); }
+  return defaultState();
+}
+function migrate(s){
+  var d = defaultState();
+  Object.keys(d).forEach(function(k){ if (s[k] === undefined) s[k] = d[k]; });
+  s.agents.forEach(function(a,i){
+    if (!a.profil) a.profil = (i<9 ? "testeur" : "observateur");
+    if (a.polyvalent === undefined) a.polyvalent = true;
+    if (!a.code) a.code = (a.profil==="testeur"?"T-":"O-")+pad2(i+1);
+  });
+  s.sites.forEach(function(x){ if (x.nuit === undefined) x.nuit = !!x.special2E; });
+  return s;
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function uid(p){ return p+"-"+Math.random().toString(36).slice(2,9); }
+function byId(arr,id){ for (var i=0;i<arr.length;i++){ if (arr[i].id===id) return arr[i]; } return null; }
+function getSite(id){ return byId(STATE.sites,id); }
+function getPrestataire(id){ return byId(STATE.prestataires,id); }
+function getAgent(id){ return byId(STATE.agents,id); }
+function getCreneau(id){ return byId(CRENEAUX,id); }
+function agentLabel(a){ if (!a) return "—"; return STATE.anonymise ? a.code : a.nom; }
+function round1(n){ return Math.round(n*10)/10; }
+function round2(n){ return Math.round(n*100)/100; }
+
+var DAY_MS = 86400000;
+function addDays(dateStr,n){
+  var d = new Date(dateStr+"T00:00:00");
+  d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function weekdayIdx(dateStr){ // 0 = lundi
+  var d = new Date(dateStr+"T00:00:00").getDay();
+  return (d+6)%7;
+}
+function formatDateFR(iso){
+  var d = new Date(iso+"T00:00:00");
+  return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric"});
+}
+
+/* PRNG déterministe (mulberry32) : même graine = même planning */
+function makeRng(seed){
+  var t = seed >>> 0;
+  return function(){
+    t += 0x6D2B79F5;
+    var r = t;
+    r = Math.imul(r ^ (r>>>15), r|1);
+    r ^= r + Math.imul(r ^ (r>>>7), r|61);
+    return ((r ^ (r>>>14))>>>0)/4294967296;
+  };
+}
+function shuffleRng(arr,rng){
+  var a = arr.slice(), i, k, tmp;
+  for (i=a.length-1;i>0;i--){ k = Math.floor(rng()*(i+1)); tmp=a[i]; a[i]=a[k]; a[k]=tmp; }
+  return a;
+}
+
+/* =========================================================
+   CLASSIFICATION DU RISQUE
+   ========================================================= */
+/* comptages : 1–2 = Faible, 3–4 = Élevé, ≥5 = Critique  → seuil inclusif */
+function classifyCount(v,s){ if (v <= s.faible) return "faible"; if (v <= s.eleve) return "eleve"; return "critique"; }
+/* pourcentages : < 25 % = Faible, 25–50 % = Élevé, > 50 % = Critique → seuil exclusif */
+function classifyPct(v,s){ if (v < s.faible) return "faible"; if (v <= s.eleve) return "eleve"; return "critique"; }
+function riskLabel(r){ return r==="faible" ? "Faible" : (r==="eleve" ? "Élevé" : "Critique"); }
+function worstRisk(list){
+  var order = {faible:0, eleve:1, critique:2}, w = "faible";
+  list.forEach(function(r){ if (order[r] > order[w]) w = r; });
+  return w;
+}
+
+/* =========================================================
+   CAPACITE (arithmétique des seuils)
+   ========================================================= */
+function computeCapacity(st){
+  var nbSites = st.sites.length;
+  var prestUsed = {};
+  st.sites.forEach(function(s){ prestUsed[s.prestataireId] = true; });
+  var nbPrest = Object.keys(prestUsed).length;
+  var poidsMoyen = (Number(st.poidsTesteur) + Number(st.poidsObservateur))/2;
+  if (!poidsMoyen) poidsMoyen = 1;
+
+  var capSite  = nbSites * st.seuils.site.faible / poidsMoyen;
+  var capPrest = nbPrest * st.seuils.prestataire.faible / poidsMoyen;
+  var annuelAgent = Math.min(capSite, capPrest);
+  var binding = (capPrest <= capSite) ? "prestataire" : "site";
+
+  var nbAgents = st.agents.length;
+  var missionsAnMax = nbAgents * annuelAgent / 2;      // 1 mission mobilise 2 agents
+  var parCycleMax   = missionsAnMax * 28 / 365;
+  var demande       = st.missionsParCycle;
+  var demandeAn     = demande * 365 / 28;
+
+  return {
+    nbSites:nbSites, nbPrest:nbPrest, nbAgents:nbAgents, poidsMoyen:poidsMoyen,
+    capSite:capSite, capPrest:capPrest, annuelAgent:annuelAgent, binding:binding,
+    missionsAnMax:missionsAnMax, parCycleMax:parCycleMax,
+    demande:demande, demandeAn:demandeAn,
+    missionsParAgentCycle: nbAgents ? 2*demande/nbAgents : 0,
+    missionsParAgentAn:    nbAgents ? 2*demandeAn/nbAgents : 0,
+    cyclesAvantSaturation: demande>0 ? missionsAnMax/demande : Infinity,
+    soutenable: demandeAn <= missionsAnMax
+  };
+}
+
+/* =========================================================
+   GENERATION D'UN CYCLE  (fonction pure, testable)
+   Volume exprimé en missions par cycle pour l'équipe :
+   les agents tournent, tous ne sortent pas à chaque cycle.
+   ========================================================= */
+function generateCycleCore(st, startDate, cycleId, seed){
+  var rng = makeRng(seed);
+  var agents = st.agents;
+  var N = st.missionsParCycle;
+  var poids = {testeur:Number(st.poidsTesteur), observateur:Number(st.poidsObservateur)};
+  var seuilSite = st.seuils.site.faible;
+  var seuilPrest = st.seuils.prestataire.faible;
+  var cycleEnd = addDays(startDate,27);
+  var windowStart = addDays(cycleEnd,-364);
+
+  var res = {missions:[], warnings:[], demande:N, unplaced:0, blockedSite:0, blockedPair:0};
+
+  /* ---- compteurs initialisés depuis l'historique (12 mois glissants) ---- */
+  var cntSite={}, cntPrest={}, cntCre={}, nbT={}, nbO={}, pairCount={}, used12={};
+  agents.forEach(function(a){
+    cntSite[a.id]={}; cntPrest[a.id]={}; cntCre[a.id]={};
+    nbT[a.id]=0; nbO[a.id]=0; pairCount[a.id]={}; used12[a.id]=0;
+  });
+
+  st.planning.forEach(function(m){
+    var site = byId(st.sites, m.siteId);
+    var inWin = (m.date >= windowStart && m.date <= cycleEnd);
+    [[m.testeurId,"testeur"],[m.observateurId,"observateur"]].forEach(function(pr){
+      var id = pr[0], w = poids[pr[1]];
+      if (!id || !cntSite[id]) return;
+      if (inWin){
+        cntSite[id][m.siteId] = (cntSite[id][m.siteId]||0) + w;
+        if (site) cntPrest[id][site.prestataireId] = (cntPrest[id][site.prestataireId]||0) + w;
+        cntCre[id][m.creneauId] = (cntCre[id][m.creneauId]||0) + 1;
+        used12[id]++;
+      }
+    });
+    if (nbT[m.testeurId] !== undefined) nbT[m.testeurId]++;
+    if (nbO[m.observateurId] !== undefined) nbO[m.observateurId]++;
+    if (pairCount[m.testeurId] && pairCount[m.observateurId]){
+      pairCount[m.testeurId][m.observateurId] = (pairCount[m.testeurId][m.observateurId]||0)+1;
+      pairCount[m.observateurId][m.testeurId] = (pairCount[m.observateurId][m.testeurId]||0)+1;
+    }
+  });
+
+  /* ---- jours du cycle ---- */
+  var days = [];
+  for (var d=0; d<28; d++){
+    var date = addDays(startDate,d);
+    var w = weekdayIdx(date);
+    if (st.joursActifs[w]) days.push({date:date, jour:w, semaine:Math.floor(d/7)+1});
+  }
+  if (!days.length){ res.warnings.push("Aucun jour d'activité sélectionné."); return res; }
+
+  var maxDuosJour = Math.floor(agents.length/2);
+  var maxParAgent = Math.max(1, Math.ceil(2*N/agents.length));
+
+  var perDay = [];
+  var base = Math.floor(N/days.length), rem = N % days.length;
+  for (var i=0;i<days.length;i++) perDay.push(base);
+  shuffleRng(days.map(function(_,k){return k;}), rng).slice(0,rem).forEach(function(k){ perDay[k]++; });
+  for (i=0;i<days.length;i++){ if (perDay[i] > maxDuosJour) perDay[i] = maxDuosJour; }
+
+  // nombre de missions attendu par agent sur ce cycle, puis quota de créneaux
+  var expected = {};
+  var baseAg = Math.floor(2*N/agents.length), remAg = (2*N) % agents.length;
+  var ordreAg = shuffleRng(agents.slice(), rng);
+  ordreAg.forEach(function(a,i){ expected[a.id] = baseAg + (i < remAg ? 1 : 0); });
+  var quota = {};
+  agents.forEach(function(a){
+    var E = expected[a.id], b = Math.floor(E/5), r = E%5, o = {};
+    CRENEAUX.forEach(function(c){ o[c.id] = b; });
+    // le reliquat va sur les créneaux les moins fréquentés par CET agent sur 12 mois :
+    // c'est ce qui empêche un agent peu sollicité de retomber toujours sur la même tranche
+    var ordre = shuffleRng(CRENEAUX.slice(), rng).sort(function(x,y){
+      return (cntCre[a.id][x.id]||0) - (cntCre[a.id][y.id]||0);
+    });
+    for (var q=0;q<r;q++){ o[ordre[q].id]++; }
+    quota[a.id] = o;
+  });
+
+  var globalCre = {}; CRENEAUX.forEach(function(c){ globalCre[c.id]=0; });
+  var globalSite = {}; st.sites.forEach(function(s){ globalSite[s.id]=0; });
+  var cntCycle = {}; agents.forEach(function(a){ cntCycle[a.id]=0; });
+  var missionCounter = 1, carry = 0;
+
+  for (var di=0; di<days.length; di++){
+    var day = days[di];
+    var usedToday = {};
+    var target = perDay[di] + carry;
+    if (target > maxDuosJour){ carry = target - maxDuosJour; target = maxDuosJour; }
+    else carry = 0;
+    var placed = 0;
+    for (var k=0;k<target;k++){
+      var duo = buildDuo(day, usedToday, true) || buildDuo(day, usedToday, false);
+      if (!duo) break;
+      res.missions.push(duo);
+      placed++;
+    }
+    carry += (target - placed);
+  }
+  res.unplaced = N - res.missions.length;
+
+  /* ---- construction d'un binôme ---- */
+  function buildDuo(day, usedToday, strictCre){
+    var avail = agents.filter(function(a){
+      return !usedToday[a.id] && cntCycle[a.id] < maxParAgent;
+    });
+    if (avail.length < 2) return null;
+    avail = shuffleRng(avail, rng);
+    avail.sort(function(x,y){
+      if (cntCycle[x.id] !== cntCycle[y.id]) return cntCycle[x.id] - cntCycle[y.id];
+      return used12[x.id] - used12[y.id];
+    });
+
+    for (var ai=0; ai<avail.length; ai++){
+      var A = avail[ai];
+      var partners = shuffleRng(avail.filter(function(b){ return b.id !== A.id; }), rng);
+      partners.sort(function(x,y){
+        var px = pairCount[A.id][x.id]||0, py = pairCount[A.id][y.id]||0;
+        if (px !== py) return px - py;
+        if (cntCycle[x.id] !== cntCycle[y.id]) return cntCycle[x.id] - cntCycle[y.id];
+        if (used12[x.id] !== used12[y.id]) return used12[x.id] - used12[y.id];
+        return 0;
+      });
+
+      for (var bi=0; bi<partners.length; bi++){
+        var B = partners[bi];
+        var roles = assignRoles(A,B);
+        if (!roles){ res.blockedPair++; continue; }
+
+        var creList = orderedCreneaux(A,B,strictCre);
+        if (!creList.length) continue;
+        for (var ci=0; ci<creList.length; ci++){
+          var cre = creList[ci];
+          var site = chooseSite(roles.testeur, roles.observateur, cre);
+          if (!site) continue;
+
+          cntCycle[A.id]++; cntCycle[B.id]++;
+          used12[A.id]++;   used12[B.id]++;
+          usedToday[A.id] = true; usedToday[B.id] = true;
+          globalCre[cre.id]++; globalSite[site.id]++;
+          quota[A.id][cre.id]--; quota[B.id][cre.id]--;
+          cntCre[A.id][cre.id] = (cntCre[A.id][cre.id]||0)+1;
+          cntCre[B.id][cre.id] = (cntCre[B.id][cre.id]||0)+1;
+          pairCount[A.id][B.id] = (pairCount[A.id][B.id]||0)+1;
+          pairCount[B.id][A.id] = (pairCount[B.id][A.id]||0)+1;
+          nbT[roles.testeur.id]++; nbO[roles.observateur.id]++;
+          cntSite[roles.testeur.id][site.id]     = (cntSite[roles.testeur.id][site.id]||0) + poids.testeur;
+          cntSite[roles.observateur.id][site.id] = (cntSite[roles.observateur.id][site.id]||0) + poids.observateur;
+          cntPrest[roles.testeur.id][site.prestataireId]     = (cntPrest[roles.testeur.id][site.prestataireId]||0) + poids.testeur;
+          cntPrest[roles.observateur.id][site.prestataireId] = (cntPrest[roles.observateur.id][site.prestataireId]||0) + poids.observateur;
+
+          return {
+            id: cycleId+"-m"+(missionCounter++),
+            cycleId: cycleId, semaine: day.semaine, jour: day.jour, date: day.date,
+            creneauId: cre.id, siteId: site.id,
+            testeurId: roles.testeur.id, observateurId: roles.observateur.id,
+            signalement: "aucun"
+          };
+        }
+        res.blockedSite++;
+      }
+    }
+    return null;
+  }
+
+  /* rôle : qualification respectée puis rééquilibrage testeur / observateur */
+  function assignRoles(A,B){
+    var aT = A.polyvalent || A.profil==="testeur";
+    var aO = A.polyvalent || A.profil==="observateur";
+    var bT = B.polyvalent || B.profil==="testeur";
+    var bO = B.polyvalent || B.profil==="observateur";
+    var opt1 = aT && bO, opt2 = bT && aO;
+    if (!opt1 && !opt2) return null;
+    if (opt1 && !opt2) return {testeur:A, observateur:B};
+    if (opt2 && !opt1) return {testeur:B, observateur:A};
+    var sA = nbT[A.id] - nbO[A.id], sB = nbT[B.id] - nbO[B.id];
+    if (sA < sB) return {testeur:A, observateur:B};
+    if (sB < sA) return {testeur:B, observateur:A};
+    return (rng() < 0.5) ? {testeur:A, observateur:B} : {testeur:B, observateur:A};
+  }
+
+  /* créneaux : équilibre global d'abord, équilibre individuel ensuite */
+  function orderedCreneaux(A,B,strictCre){
+    var list = shuffleRng(CRENEAUX.slice(), rng);
+    if (strictCre){
+      list = list.filter(function(c){ return quota[A.id][c.id] > 0 && quota[B.id][c.id] > 0; });
+      if (!list.length) return [];
+    }
+    list.sort(function(x,y){
+      // équilibre individuel d'abord (c'est lui qui porte le risque d'exposition),
+      // équilibre global de la charge ensuite
+      var ix = (cntCre[A.id][x.id]||0)+(cntCre[B.id][x.id]||0);
+      var iy = (cntCre[A.id][y.id]||0)+(cntCre[B.id][y.id]||0);
+      if (ix !== iy) return ix - iy;
+      return globalCre[x.id] - globalCre[y.id];
+    });
+    return list;
+  }
+
+  /* site : plafonds durs 12 mois glissants, puis exposition minimale */
+  function chooseSite(T,O,cre){
+    var pool = st.sites;
+    if (st.nuitReserve && cre.id === "c5"){
+      var np = pool.filter(function(s){ return s.nuit; });
+      if (np.length) pool = np;
+    }
+    var feasible = pool.filter(function(s){
+      return (cntSite[T.id][s.id]||0) + poids.testeur     <= seuilSite &&
+             (cntSite[O.id][s.id]||0) + poids.observateur <= seuilSite &&
+             (cntPrest[T.id][s.prestataireId]||0) + poids.testeur     <= seuilPrest &&
+             (cntPrest[O.id][s.prestataireId]||0) + poids.observateur <= seuilPrest;
+    });
+    if (!feasible.length){
+      if (st.modeStrict) return null;
+      feasible = pool.slice();
+    }
+    feasible = shuffleRng(feasible, rng);
+    feasible.sort(function(x,y){
+      var ex = (cntSite[T.id][x.id]||0)+(cntSite[O.id][x.id]||0);
+      var ey = (cntSite[T.id][y.id]||0)+(cntSite[O.id][y.id]||0);
+      if (ex !== ey) return ex - ey;
+      var px = (cntPrest[T.id][x.prestataireId]||0)+(cntPrest[O.id][x.prestataireId]||0);
+      var py = (cntPrest[T.id][y.prestataireId]||0)+(cntPrest[O.id][y.prestataireId]||0);
+      if (px !== py) return px - py;
+      return globalSite[x.id] - globalSite[y.id];
+    });
+    return feasible[0];
+  }
+
+  if (res.unplaced > 0){
+    res.warnings.push(
+      res.missions.length + " missions planifiées sur les " + N + " demandées. Les " + res.unplaced +
+      " manquantes auraient fait franchir le seuil Faible à au moins un agent (budget d'exposition 12 mois épuisé). " +
+      "En mode strict le générateur préfère planifier moins plutôt que de dégrader l'anonymat. " +
+      "Leviers : plus de prestataires ou de sites, moins de missions par cycle, ou seuils relevés — voir l'onglet Capacité."
+    );
+  }
+  return res;
+}
+
+/* =========================================================
+   CONTROLES DE COHERENCE
+   ========================================================= */
+function runControles(st, cycleId){
+  var ms = st.planning.filter(function(m){ return m.cycleId === cycleId; });
+  var checks = [];
+  function add(nom, ok, detail){ checks.push({nom:nom, ok:ok, detail:detail}); }
+
+  if (ms.length === 0){ return [{nom:"Cycle sélectionné", ok:false, detail:"Aucune mission — générez un cycle."}]; }
+
+  // 1. un seul duo par agent et par jour
+  var byDayAgent = {}, dup = [];
+  ms.forEach(function(m){
+    [m.testeurId, m.observateurId].forEach(function(id){
+      var k = m.date+"|"+id;
+      if (byDayAgent[k]) dup.push(k); else byDayAgent[k] = m;
+    });
+  });
+  add("Un seul binôme par agent et par jour", dup.length===0,
+      dup.length===0 ? ms.length+" missions vérifiées" : dup.length+" conflit(s)");
+
+  // 2. un seul site par agent et par jour (corollaire du 1, vérifié séparément)
+  var siteConflicts = 0, seen = {};
+  ms.forEach(function(m){
+    [m.testeurId, m.observateurId].forEach(function(id){
+      var k = m.date+"|"+id;
+      if (seen[k] && seen[k] !== m.siteId) siteConflicts++;
+      seen[k] = m.siteId;
+    });
+  });
+  add("Un seul site par agent et par jour", siteConflicts===0,
+      siteConflicts===0 ? "Aucun déplacement inter-site dans la journée" : siteConflicts+" conflit(s)");
+
+  // 3. composition 1 testeur + 1 observateur
+  var badComp = ms.filter(function(m){ return !m.testeurId || !m.observateurId || m.testeurId===m.observateurId; }).length;
+  add("1 testeur + 1 observateur par mission", badComp===0,
+      badComp===0 ? "Toutes les missions sont en binôme complet" : badComp+" mission(s) incomplète(s)");
+
+  // 4. qualification respectée
+  var badRole = 0;
+  ms.forEach(function(m){
+    var t = byId(st.agents,m.testeurId), o = byId(st.agents,m.observateurId);
+    if (t && !t.polyvalent && t.profil!=="testeur") badRole++;
+    if (o && !o.polyvalent && o.profil!=="observateur") badRole++;
+  });
+  add("Rôle conforme à la qualification de l'agent", badRole===0,
+      badRole===0 ? "Aucun agent hors qualification" : badRole+" affectation(s) non conforme(s)");
+
+  // 5. répartition des créneaux
+  var cre = {}; CRENEAUX.forEach(function(c){ cre[c.id]=0; });
+  ms.forEach(function(m){ cre[m.creneauId] = (cre[m.creneauId]||0)+1; });
+  var vals = CRENEAUX.map(function(c){ return cre[c.id]; });
+  var mx = Math.max.apply(null,vals), mn = Math.min.apply(null,vals);
+  var ecart = ms.length ? Math.round((mx-mn)/ms.length*1000)/10 : 0;
+  add("Répartition égale des 5 tranches horaires", (mx-mn) <= Math.max(2, Math.ceil(ms.length*0.06)),
+      vals.join(" / ") + " missions — écart max " + ecart + " pt" +
+      (ms.length < 10 ? " (volume faible : l'égalité parfaite se lit sur plusieurs cycles)" : ""));
+
+  // 6. plafond individuel par créneau (< 25 %)
+  var endD = ms.reduce(function(acc,m){ return m.date>acc?m.date:acc; }, ms[0].date);
+  var worstPct = 0, worstAgent = "—", worstFloor = 0, depassements = 0;
+  st.agents.forEach(function(a){
+    var c = creneauAgent(st, a, endD, cycleId);
+    if (!c.total) return;
+    // plancher mathématique : avec n missions réparties sur 5 tranches,
+    // la tranche la plus fréquente pèse au minimum ceil(n/5)/n
+    var plancher = Math.ceil(c.total/5)/c.total*100;
+    if (c.pct > st.seuils.creneau.faible && c.pct > plancher + 0.01) depassements++;
+    if (c.pct > worstPct){ worstPct = c.pct; worstAgent = agentLabel(a); worstFloor = plancher; }
+  });
+  var creOk = (depassements === 0);
+  add("Créneau le plus répété par agent < " + st.seuils.creneau.faible + " %", creOk,
+      "Maximum : " + round1(worstPct) + " % (" + worstAgent + ") — fenêtre " +
+      (st.fenetreCreneau === "cycle" ? "cycle" : "12 mois") +
+      (worstPct >= st.seuils.creneau.faible
+        ? " · plancher mathématique à ce volume : " + round1(worstFloor) + " %, répartition déjà optimale"
+        : "") +
+      (depassements ? " · " + depassements + " agent(s) au-dessus du plancher" : ""));
+
+  // 7. exposition 12 mois : site & prestataire
+  var end = ms.reduce(function(acc,m){ return m.date>acc?m.date:acc; }, ms[0].date);
+  var overSite = [], overPrest = [];
+  st.agents.forEach(function(a){
+    var e = expositionAgent(st, a, end);
+    if (classifyCount(e.maxSite, st.seuils.site) !== "faible") overSite.push(agentLabel(a));
+    if (classifyCount(e.maxPrest, st.seuils.prestataire) !== "faible") overPrest.push(agentLabel(a));
+  });
+  add("Passages sur un même site ≤ "+st.seuils.site.faible+" (12 mois)", overSite.length===0,
+      overSite.length===0 ? "Tous les agents en risque Faible" : "Hors seuil : "+overSite.join(", "));
+  add("Missions chez un même prestataire ≤ "+st.seuils.prestataire.faible+" (12 mois)", overPrest.length===0,
+      overPrest.length===0 ? "Tous les agents en risque Faible" : "Hors seuil : "+overPrest.join(", "));
+
+  // 8. binômes récurrents
+  var winStart = addDays(end,-364);
+  var pc = {}, maxPair = 0, maxPairLbl = "—";
+  st.planning.filter(function(m){ return m.date>=winStart && m.date<=end; }).forEach(function(m){
+    var k = [m.testeurId,m.observateurId].sort().join("|");
+    pc[k] = (pc[k]||0)+1;
+    if (pc[k] > maxPair){
+      maxPair = pc[k];
+      var ids = k.split("|");
+      maxPairLbl = agentLabel(byId(st.agents,ids[0]))+" / "+agentLabel(byId(st.agents,ids[1]));
+    }
+  });
+  add("Aucun binôme fortement récurrent (≤ 3 sur 12 mois)", maxPair <= 3,
+      "Binôme le plus fréquent : "+maxPairLbl+" — "+maxPair+" fois sur 12 mois");
+
+  // 9. reconnaissance
+  var recon = ms.filter(function(m){ return m.signalement !== "aucun"; });
+  add("Aucun signalement de reconnaissance", recon.length===0,
+      recon.length===0 ? "Aucun test compromis" : recon.length+" signalement(s) — retrait immédiat à envisager");
+
+  return checks;
+}
+
+/* =========================================================
+   EXPOSITION D'UN AGENT (12 mois glissants)
+   ========================================================= */
+function expositionAgent(st, agent, refDate){
+  var windowStart = addDays(refDate,-364);
+  var siteC = {}, prestC = {}, n = 0;
+  st.planning.forEach(function(m){
+    if (m.date < windowStart || m.date > refDate) return;
+    var role = (m.testeurId===agent.id) ? "testeur" : ((m.observateurId===agent.id) ? "observateur" : null);
+    if (!role) return;
+    n++;
+    var w = role==="testeur" ? Number(st.poidsTesteur) : Number(st.poidsObservateur);
+    siteC[m.siteId] = (siteC[m.siteId]||0)+w;
+    var s = byId(st.sites,m.siteId);
+    if (s) prestC[s.prestataireId] = (prestC[s.prestataireId]||0)+w;
+  });
+  function top(o){
+    var bk=null, bv=0;
+    Object.keys(o).forEach(function(k){ if (o[k]>bv){ bv=o[k]; bk=k; } });
+    return {key:bk, val:bv};
+  }
+  var ts = top(siteC), tp = top(prestC);
+  return {
+    total: n,
+    maxSite: ts.val, maxSiteId: ts.key,
+    maxPrest: tp.val, maxPrestId: tp.key,
+    siteCounts: siteC, prestCounts: prestC
+  };
+}
+
+
+/* Part du créneau le plus fréquent pour un agent, sur la fenêtre choisie */
+function creneauAgent(st, agent, refDate, cycleId){
+  var from = (st.fenetreCreneau === "cycle") ? null : addDays(refDate,-364);
+  var mine = st.planning.filter(function(m){
+    if (m.testeurId!==agent.id && m.observateurId!==agent.id) return false;
+    if (from) return m.date >= from && m.date <= refDate;
+    return m.cycleId === cycleId;
+  });
+  var cc = {}, top = 0, topId = null;
+  mine.forEach(function(m){
+    cc[m.creneauId] = (cc[m.creneauId]||0)+1;
+    if (cc[m.creneauId] > top){ top = cc[m.creneauId]; topId = m.creneauId; }
+  });
+  return {total:mine.length, top:top, topId:topId, pct: mine.length ? top/mine.length*100 : 0, counts:cc};
+}
+
+/* =========================================================
+   RENDU : ENTETE
+   ========================================================= */
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escapeAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function renderHeader(){
+  var nbT = STATE.agents.filter(function(a){return a.profil==="testeur";}).length;
+  var nbO = STATE.agents.length - nbT;
+  document.getElementById("headerBadges").innerHTML =
+    "<span><b>"+nbT+"</b> profils testeur</span>"+
+    "<span><b>"+nbO+"</b> profils observateur</span>"+
+    "<span><b>"+STATE.sites.length+"</b> sites</span>"+
+    "<span><b>"+STATE.prestataires.length+"</b> prestataires</span>"+
+    "<span><b>"+STATE.planning.length+"</b> missions</span>";
+}
+
+/* =========================================================
+   RENDU : AGENTS
+   ========================================================= */
+function renderAgents(){
+  var rows = "<tr><th style='width:30px'>#</th><th>Nom</th><th style='width:90px'>Code</th>"+
+             "<th style='width:150px'>Profil</th><th style='width:100px'>Polyvalent</th><th style='width:44px'></th></tr>";
+  STATE.agents.forEach(function(a,i){
+    rows += "<tr><td>"+(i+1)+"</td>";
+    rows += "<td><input type='text' value='"+escapeAttr(a.nom)+"' onchange='updAgent(\""+a.id+"\",\"nom\",this.value)'></td>";
+    rows += "<td><input type='text' value='"+escapeAttr(a.code)+"' onchange='updAgent(\""+a.id+"\",\"code\",this.value)'></td>";
+    rows += "<td><select onchange='updAgent(\""+a.id+"\",\"profil\",this.value)'>"+
+            "<option value='testeur'"+(a.profil==="testeur"?" selected":"")+">Testeur</option>"+
+            "<option value='observateur'"+(a.profil==="observateur"?" selected":"")+">Observateur</option></select></td>";
+    rows += "<td style='text-align:center'><input type='checkbox' style='width:auto' "+(a.polyvalent?"checked":"")+
+            " onchange='updAgent(\""+a.id+"\",\"polyvalent\",this.checked)'></td>";
+    rows += "<td><button class='icon-btn' onclick='removeAgent(\""+a.id+"\")'>✕</button></td></tr>";
+  });
+  document.getElementById("tblAgents").innerHTML = rows;
+  renderAgentFeasibility();
+}
+function renderAgentFeasibility(){
+  var poly = STATE.agents.filter(function(a){return a.polyvalent;}).length;
+  var t = STATE.agents.filter(function(a){return !a.polyvalent && a.profil==="testeur";}).length;
+  var o = STATE.agents.filter(function(a){return !a.polyvalent && a.profil==="observateur";}).length;
+  var maxDuos = Math.floor(STATE.agents.length/2);
+  var html = "";
+  if (poly === STATE.agents.length){
+    html = "<div class='alert ok'>Tous les agents sont polyvalents : la rotation des rôles est totale et jusqu'à "+
+      maxDuos+" binômes peuvent tourner le même jour.</div>";
+  } else {
+    var duosMax = Math.min(t + Math.floor(poly/1), o + poly, maxDuos);
+    html = "<div class='alert warn'>"+t+" agent(s) testeur exclusif, "+o+" observateur exclusif, "+poly+
+      " polyvalent(s). Chaque binôme exigeant 1 testeur + 1 observateur, le nombre de binômes simultanés est plafonné à "+
+      Math.min(duosMax,maxDuos)+" par jour, et les agents non polyvalents ne bénéficieront pas de la rotation des rôles "+
+      "— leur profil devient un indice d'identification.</div>";
+  }
+  document.getElementById("agentFeasibility").innerHTML = html;
+}
+function updAgent(id,champ,val){
+  var a = getAgent(id); if (!a) return;
+  a[champ] = val; saveState();
+  if (champ==="profil" || champ==="polyvalent") renderAgents();
+  renderHeader(); renderPlanning();
+}
+function addAgent(){
+  var n = STATE.agents.length+1;
+  STATE.agents.push({id:uid("a"), nom:"Agent "+n, code:"A-"+pad2(n), profil:"testeur", polyvalent:true});
+  saveState(); renderAll();
+}
+function removeAgent(id){
+  STATE.agents = STATE.agents.filter(function(a){return a.id!==id;});
+  STATE.planning = STATE.planning.filter(function(m){return m.testeurId!==id && m.observateurId!==id;});
+  saveState(); renderAll();
+}
+function setAllPolyvalent(v){
+  STATE.agents.forEach(function(a){ a.polyvalent = v; });
+  saveState(); renderAgents();
+}
+
+/* =========================================================
+   RENDU : SITES / PRESTATAIRES
+   ========================================================= */
+function renderSites(){
+  var rows = "<tr><th>Site</th><th style='width:160px'>Prestataire</th><th style='width:70px'>Nuit</th><th style='width:44px'></th></tr>";
+  STATE.sites.forEach(function(s){
+    rows += "<tr><td><input type='text' value='"+escapeAttr(s.nom)+"' onchange='updSite(\""+s.id+"\",\"nom\",this.value)'>"+
+      (s.nuit?"<span class='tagnuit'>21–24h élevé</span>":"")+"</td>";
+    rows += "<td><select onchange='updSite(\""+s.id+"\",\"prestataireId\",this.value)'>";
+    STATE.prestataires.forEach(function(p){
+      rows += "<option value='"+p.id+"'"+(p.id===s.prestataireId?" selected":"")+">"+escapeHtml(p.nom)+"</option>";
+    });
+    rows += "</select></td>";
+    rows += "<td style='text-align:center'><input type='checkbox' style='width:auto' "+(s.nuit?"checked":"")+
+            " onchange='updSite(\""+s.id+"\",\"nuit\",this.checked)'></td>";
+    rows += "<td><button class='icon-btn' onclick='removeSite(\""+s.id+"\")'>✕</button></td></tr>";
+  });
+  document.getElementById("tblSites").innerHTML = rows;
+}
+function updSite(id,champ,val){ var s=getSite(id); if(s){ s[champ]=val; saveState(); renderSites(); renderPrestataires(); renderCapacite(); } }
+function addSite(){
+  STATE.sites.push({id:uid("s"), nom:"Site "+(STATE.sites.length+1),
+    prestataireId: STATE.prestataires.length?STATE.prestataires[0].id:null, nuit:false});
+  saveState(); renderAll();
+}
+function removeSite(id){
+  STATE.sites = STATE.sites.filter(function(s){return s.id!==id;});
+  STATE.planning = STATE.planning.filter(function(m){return m.siteId!==id;});
+  saveState(); renderAll();
+}
+function renderPrestataires(){
+  var rows = "<tr><th>Prestataire</th><th style='width:70px'>Sites</th><th style='width:44px'></th></tr>";
+  STATE.prestataires.forEach(function(p){
+    var n = STATE.sites.filter(function(s){return s.prestataireId===p.id;}).length;
+    rows += "<tr><td><input type='text' value='"+escapeAttr(p.nom)+"' onchange='updPrest(\""+p.id+"\",this.value)'></td>"+
+      "<td>"+n+"</td><td><button class='icon-btn' onclick='removePrest(\""+p.id+"\")'>✕</button></td></tr>";
+  });
+  document.getElementById("tblPrestataires").innerHTML = rows;
+}
+function updPrest(id,val){ var p=getPrestataire(id); if(p){ p.nom=val; saveState(); } }
+function addPrestataire(){
+  STATE.prestataires.push({id:uid("p"), nom:"Prestataire "+(STATE.prestataires.length+1)});
+  saveState(); renderAll();
+}
+function removePrest(id){
+  if (STATE.sites.some(function(s){return s.prestataireId===id;})){
+    alert("Ce prestataire est encore rattaché à au moins un site. Réassignez ces sites avant de le supprimer."); return;
+  }
+  STATE.prestataires = STATE.prestataires.filter(function(p){return p.id!==id;});
+  saveState(); renderAll();
+}
+
+/* =========================================================
+   RENDU : CRENEAUX & SEUILS
+   ========================================================= */
+function renderCreneaux(){
+  var rows = "<tr><th>Créneau</th><th>Volume passagers</th></tr>";
+  CRENEAUX.forEach(function(c){ rows += "<tr><td>"+c.label+"</td><td>"+c.volume+"</td></tr>"; });
+  document.getElementById("tblCreneaux").innerHTML = rows;
+}
+function renderSeuils(){
+  var s = STATE.seuils;
+  var rows = "<tr><th>Risque d'exposition</th><th class='hdr-faible'>Faible</th><th class='hdr-eleve'>Élevé</th>"+
+             "<th class='hdr-critique'>Critique</th><th style='width:190px'>Action</th></tr>";
+  rows += "<tr><td><b>Passages sur un même terminal / site</b><br><span style='color:var(--text-dim);font-size:11.5px'>sur 12 mois glissants</span></td>"+
+    "<td>1 à <input type='number' style='width:56px;display:inline-block' value='"+s.site.faible+"' onchange='updSeuil(\"site\",\"faible\",this.value)'> passages</td>"+
+    "<td>"+(s.site.faible+1)+" à <input type='number' style='width:56px;display:inline-block' value='"+s.site.eleve+"' onchange='updSeuil(\"site\",\"eleve\",this.value)'> passages</td>"+
+    "<td>≥ "+(s.site.eleve+1)+" passages</td><td>Rotation</td></tr>";
+  rows += "<tr><td><b>Interventions chez un même prestataire</b><br><span style='color:var(--text-dim);font-size:11.5px'>sur 12 mois glissants</span></td>"+
+    "<td>1 à <input type='number' style='width:56px;display:inline-block' value='"+s.prestataire.faible+"' onchange='updSeuil(\"prestataire\",\"faible\",this.value)'> missions</td>"+
+    "<td>"+(s.prestataire.faible+1)+" à <input type='number' style='width:56px;display:inline-block' value='"+s.prestataire.eleve+"' onchange='updSeuil(\"prestataire\",\"eleve\",this.value)'> missions</td>"+
+    "<td>≥ "+(s.prestataire.eleve+1)+" missions</td><td>Réaffectation</td></tr>";
+  rows += "<tr><td><b>Créneaux horaires identiques répétés</b><br><span style='color:var(--text-dim);font-size:11.5px'>part du créneau le plus fréquent, sur le cycle</span></td>"+
+    "<td>&lt; <input type='number' style='width:56px;display:inline-block' value='"+s.creneau.faible+"' onchange='updSeuil(\"creneau\",\"faible\",this.value)'> % des missions</td>"+
+    "<td>"+s.creneau.faible+" à <input type='number' style='width:56px;display:inline-block' value='"+s.creneau.eleve+"' onchange='updSeuil(\"creneau\",\"eleve\",this.value)'> %</td>"+
+    "<td>&gt; "+s.creneau.eleve+" %</td><td>Changement de planning</td></tr>";
+  rows += "<tr><td><b>Reconnaissance potentielle du testeur</b><br><span style='color:var(--text-dim);font-size:11.5px'>saisie manuelle dans le planning</span></td>"+
+    "<td>Aucun indice</td><td>Suspicion ou remarque indirecte</td><td>Test invalidé</td><td>Retrait immédiat</td></tr>";
+  document.getElementById("tblSeuils").innerHTML = rows;
+}
+function updSeuil(cat,lvl,val){
+  STATE.seuils[cat][lvl] = Number(val);
+  saveState(); renderSeuils(); renderCapacite(); renderExposition();
+}
+
+/* =========================================================
+   RENDU : PARAMETRES
+   ========================================================= */
+function renderParams(){
+  document.getElementById("inMissionsCycle").value  = STATE.missionsParCycle;
+  document.getElementById("inFenetreCreneau").value = STATE.fenetreCreneau;
+  document.getElementById("inPoidsTesteur").value    = STATE.poidsTesteur;
+  document.getElementById("inPoidsObservateur").value= STATE.poidsObservateur;
+  document.getElementById("inModeStrict").checked    = STATE.modeStrict;
+  document.getElementById("inNuitReserve").checked   = STATE.nuitReserve;
+  document.getElementById("inAnonymise").checked     = STATE.anonymise;
+  document.getElementById("inSeed").value            = STATE.seed;
+
+  var jh = "";
+  JOURS_C.forEach(function(j,i){
+    jh += "<label class='check' style='margin:0'><input type='checkbox' "+(STATE.joursActifs[i]?"checked":"")+
+          " onchange='toggleJour("+i+",this.checked)'> "+j+"</label>";
+  });
+  document.getElementById("joursActifs").innerHTML = jh;
+
+  var N = STATE.missionsParCycle, nb = STATE.agents.length;
+  var parAgent = nb ? round1(2*N/nb) : 0;
+  var jours = STATE.joursActifs.filter(Boolean).length * 4;
+  var txt = "Chaque mission mobilise 2 agents : "+N+" missions par cycle représentent <b>"+parAgent+
+    " mission(s) par agent</b> sur les 4 semaines, réparties sur "+jours+" jours d'activité "+
+    "(soit "+round1(N/Math.max(1,jours))+" binôme(s) par jour en moyenne, plafond "+Math.floor(nb/2)+"). "+
+    "Les agents tournent : tous ne sortent pas à chaque cycle, ce qui est précisément ce qui préserve leur budget d'exposition.";
+  if (parAgent >= 5 && parAgent % 5 === 0) txt += " Ce volume est un multiple de 5 : chaque agent obtiendra exactement 20 % de missions par tranche horaire.";
+  document.getElementById("creneauQuotaHint").innerHTML = txt;
+}
+function toggleJour(i,v){ STATE.joursActifs[i]=v; saveState(); renderParams(); }
+
+/* =========================================================
+   RENDU : CAPACITE
+   ========================================================= */
+function renderCapacite(){
+  var c = computeCapacity(STATE);
+  var ok = c.soutenable;
+  var k = "";
+  k += kpi(round1(c.annuelAgent), "Missions max / agent / 12 mois", "");
+  k += kpi(round1(c.parCycleMax), "Missions équipe max / cycle", ok?"":"bad");
+  k += kpi(c.demande, "Volume demandé / cycle", ok?"":"warn");
+  k += kpi(round1(c.missionsParAgentAn), "Missions / agent / an au rythme demandé", ok?"":"bad");
+  document.getElementById("capaKpis").innerHTML = k;
+
+  var h = "";
+  h += "<div class='tbl-scroll'><table>";
+  h += "<tr><th>Contrainte</th><th>Calcul</th><th>Plafond annuel par agent</th><th>Statut</th></tr>";
+  h += "<tr><td>Passages sur un même site</td><td class='mono'>"+c.nbSites+" sites × "+STATE.seuils.site.faible+
+       " passages ÷ "+round2(c.poidsMoyen)+"</td><td><b>"+round1(c.capSite)+"</b> missions</td><td>"+
+       (c.binding==="site"?"<span class='pill critique'>Facteur limitant</span>":"<span class='pill faible'>Non limitant</span>")+"</td></tr>";
+  h += "<tr><td>Interventions chez un même prestataire</td><td class='mono'>"+c.nbPrest+" prestataires × "+STATE.seuils.prestataire.faible+
+       " missions ÷ "+round2(c.poidsMoyen)+"</td><td><b>"+round1(c.capPrest)+"</b> missions</td><td>"+
+       (c.binding==="prestataire"?"<span class='pill critique'>Facteur limitant</span>":"<span class='pill faible'>Non limitant</span>")+"</td></tr>";
+  h += "</table></div>";
+
+  if (!c.soutenable){
+    h += "<div class='alert bad' style='margin-top:14px'><b>Le volume demandé n'est pas tenable sur 12 mois en risque Faible.</b><br>"+
+      "Vous demandez "+c.demande+" missions par cycle, soit <b>"+Math.round(c.demandeAn)+" missions par an</b> pour l'équipe et "+
+      round1(c.missionsParAgentAn)+" par agent, alors que le plafond Faible est de <b>"+round1(c.missionsAnMax)+
+      " missions par an</b> ("+round1(c.annuelAgent)+" par agent).<br>"+
+      "Le budget d'exposition est épuisé au bout d'environ <b>"+round1(c.cyclesAvantSaturation)+" cycle(s)</b>, soit "+
+      Math.round(c.cyclesAvantSaturation*28)+" jours.<br><br>"+
+      "En mode strict le générateur ne trichera pas : il planifiera moins de missions plutôt que de vous faire basculer en risque Élevé. "+
+      "Ce n'est pas un défaut de l'outil, c'est le résultat : avec "+c.nbPrest+" prestataires et "+c.nbSites+" sites, "+
+      "la contrainte « "+c.binding+" » est le vrai goulot d'étranglement du dispositif.</div>";
+  } else {
+    h += "<div class='alert ok' style='margin-top:14px'><b>Volume tenable.</b> "+Math.round(c.demandeAn)+
+      " missions par an pour un plafond de "+round1(c.missionsAnMax)+
+      " : le mode strict pourra planifier l'intégralité des missions, cycle après cycle, sans jamais sortir du risque Faible.</div>";
+  }
+  document.getElementById("capaDetail").innerHTML = h;
+  renderLeviers(c);
+}
+function kpi(num,lbl,cls){
+  return "<div class='kpi'><div class='num "+(cls||"")+"'>"+num+"</div><div class='lbl'>"+lbl+"</div></div>";
+}
+function renderLeviers(c){
+  var rows = "<tr><th>Levier</th><th>Valeur actuelle</th><th>Valeur nécessaire</th><th>Effet</th></tr>";
+  var besoin = c.missionsParAgentAn * c.poidsMoyen;
+
+  var prestNeeded = Math.ceil(besoin / STATE.seuils.prestataire.faible);
+  rows += "<tr><td>Augmenter le nombre de prestataires distincts</td><td>"+c.nbPrest+"</td><td><b>"+prestNeeded+"</b></td>"+
+    "<td>Chaque prestataire supplémentaire ouvre "+round1(STATE.seuils.prestataire.faible/c.poidsMoyen)+" missions/agent/an</td></tr>";
+
+  var sitesNeeded = Math.ceil(besoin / STATE.seuils.site.faible);
+  rows += "<tr><td>Augmenter le nombre de sites distincts</td><td>"+c.nbSites+"</td><td><b>"+sitesNeeded+"</b></td>"+
+    "<td>Chaque site supplémentaire ouvre "+round1(STATE.seuils.site.faible/c.poidsMoyen)+" missions/agent/an</td></tr>";
+
+  var volOk = Math.floor(c.parCycleMax);
+  rows += "<tr><td>Réduire le volume de missions par cycle</td><td>"+c.demande+"</td><td><b>"+volOk+"</b></td>"+
+    "<td>Seule action immédiate sans modifier le périmètre "+
+    (volOk>0?"— <button class='btn small' onclick='applyMax("+volOk+")'>Appliquer "+volOk+"</button>":"(le périmètre actuel ne permet aucun volume soutenable)")+"</td></tr>";
+
+  var poidsNeeded = c.missionsParAgentAn>0 ? round2(c.poidsMoyen * c.annuelAgent / c.missionsParAgentAn) : 0;
+  rows += "<tr><td>Baisser le poids d'exposition du rôle observateur</td><td>"+STATE.poidsObservateur+
+    "</td><td><b>"+Math.max(0, round2(2*poidsNeeded - Number(STATE.poidsTesteur)))+"</b></td>"+
+    "<td>Hypothèse de modélisation à assumer : l'observateur est-il vraiment moins exposé ?</td></tr>";
+
+  document.getElementById("tblLeviers").innerHTML = rows;
+}
+function applyMax(v){
+  STATE.missionsParCycle = v;
+  saveState(); renderParams(); renderCapacite(); renderGenWarn();
+}
+
+/* =========================================================
+   GENERATION
+   ========================================================= */
+var currentCycleId = null, currentWeek = 0, currentView = "cal";
+
+function defaultNextStartDate(){
+  if (STATE.cycles.length === 0){
+    var today = new Date();
+    var day = today.getDay();
+    var diff = (day===0) ? 1 : (day===1 ? 7 : 8-day);
+    return new Date(today.getTime()+diff*DAY_MS).toISOString().slice(0,10);
+  }
+  return addDays(STATE.cycles[STATE.cycles.length-1].startDate, 28);
+}
+function regenSeed(){
+  STATE.seed = Math.floor(Math.random()*1e8);
+  document.getElementById("inSeed").value = STATE.seed;
+  saveState();
+}
+function generateCycle(){
+  if (STATE.sites.length === 0){ alert("Ajoutez au moins un site."); return; }
+  if (STATE.agents.length < 2){ alert("Il faut au moins 2 agents."); return; }
+  var startDate = document.getElementById("inStartDate").value;
+  if (!startDate){ alert("Choisissez une date de début."); return; }
+  STATE.seed = Number(document.getElementById("inSeed").value) || 1;
+
+  var cycleId = uid("cy");
+  var res = generateCycleCore(STATE, startDate, cycleId, STATE.seed);
+  if (res.missions.length === 0){
+    document.getElementById("genSummary").innerHTML =
+      "<div class='alert bad'>Aucune mission n'a pu être planifiée. "+(res.warnings[0]||"")+"</div>";
+    return;
+  }
+  STATE.planning = STATE.planning.concat(res.missions);
+  STATE.cycles.push({id:cycleId, startDate:startDate, seed:STATE.seed});
+  currentCycleId = cycleId; currentWeek = 0;
+  saveState();
+
+  var html = "<div class='alert "+(res.unplaced>0?"warn":"ok")+"'><b>Cycle généré</b> du "+formatDateFR(startDate)+
+    " au "+formatDateFR(addDays(startDate,27))+" — "+res.missions.length+" missions, "+STATE.agents.length+" agents.</div>";
+  res.warnings.forEach(function(w){ html += "<div class='alert warn'>"+w+"</div>"; });
+  document.getElementById("genSummary").innerHTML = html;
+  document.getElementById("inStartDate").value = defaultNextStartDate();
+  renderAll();
+  switchTab("planning");
+}
+function clearPlanning(){
+  if (!confirm("Vider tout l'historique de missions et tous les cycles ?")) return;
+  STATE.planning = []; STATE.cycles = []; currentCycleId = null;
+  saveState(); renderAll();
+  document.getElementById("genSummary").innerHTML = "";
+}
+function renderGenWarn(){
+  var c = computeCapacity(STATE);
+  var el = document.getElementById("genWarn");
+  if (!el) return;
+  if (c.soutenable){
+    el.innerHTML = "<div class='alert ok'>Volume de <b>"+c.demande+" missions par cycle</b> ("+round1(c.missionsParAgentCycle)+
+      " par agent) : tenable indéfiniment en risque Faible.</div>";
+  } else {
+    var vmax = Math.floor(c.parCycleMax);
+    el.innerHTML = "<div class='alert warn'><b>Volume non tenable sur 12 mois.</b> À "+c.demande+
+      " missions par cycle, le budget d'exposition sera épuisé après ~"+round1(c.cyclesAvantSaturation)+
+      " cycle(s) et les cycles suivants seront tronqués. Rythme tenable : <b>"+vmax+" missions par cycle</b>"+
+      (vmax>0?" <button class='btn small' onclick='applyMax("+vmax+")'>Appliquer</button>":"")+
+      " — détail dans l'onglet Capacité.</div>";
+  }
+}
+function renderCyclesList(){
+  var el = document.getElementById("cyclesList");
+  if (!STATE.cycles.length){ el.innerHTML = ""; return; }
+  var h = "<h3>Cycles enregistrés</h3><div class='tbl-scroll'><table><tr><th>Début</th><th>Fin</th><th>Missions</th><th>Graine</th></tr>";
+  STATE.cycles.forEach(function(c){
+    var n = STATE.planning.filter(function(m){return m.cycleId===c.id;}).length;
+    h += "<tr><td>"+formatDateFR(c.startDate)+"</td><td>"+formatDateFR(addDays(c.startDate,27))+"</td><td>"+n+"</td><td class='mono'>"+(c.seed||"—")+"</td></tr>";
+  });
+  h += "</table></div>";
+  el.innerHTML = h;
+}
+
+/* =========================================================
+   RENDU : PLANNING
+   ========================================================= */
+function renderCycleSelect(){
+  var sel = document.getElementById("cycleSelect");
+  if (!STATE.cycles.length){ sel.innerHTML = "<option value=''>Aucun cycle généré</option>"; return; }
+  if (!currentCycleId || !STATE.cycles.some(function(c){return c.id===currentCycleId;})){
+    currentCycleId = STATE.cycles[STATE.cycles.length-1].id;
+  }
+  sel.innerHTML = STATE.cycles.map(function(c){
+    return "<option value='"+c.id+"'"+(c.id===currentCycleId?" selected":"")+">"+
+      formatDateFR(c.startDate)+" → "+formatDateFR(addDays(c.startDate,27))+"</option>";
+  }).join("");
+}
+function setCycle(id){ currentCycleId = id; currentWeek = 0; renderPlanning(); renderExposition(); renderControles(); }
+function setWeek(w){ currentWeek = w; renderPlanning(); }
+function setView(v){ currentView = v; renderPlanning(); }
+
+function renderWeekTabs(){
+  var h = "<button class='"+(currentWeek===0?"active":"")+"' onclick='setWeek(0)'>Cycle complet</button>";
+  for (var w=1;w<=4;w++) h += "<button class='"+(w===currentWeek?"active":"")+"' onclick='setWeek("+w+")'>Semaine "+w+"</button>";
+  document.getElementById("weekTabs").innerHTML = h;
+  document.getElementById("btnViewCal").style.borderColor = currentView==="cal" ? "var(--accent)" : "var(--border)";
+  document.getElementById("btnViewTbl").style.borderColor = currentView==="tbl" ? "var(--accent)" : "var(--border)";
+}
+function cycleMissions(){
+  return STATE.planning.filter(function(m){
+    return m.cycleId===currentCycleId && (currentWeek===0 || m.semaine===currentWeek);
+  });
+}
+function renderPlanning(){
+  renderWeekTabs();
+  var calEl = document.getElementById("calWrap");
+  var tblEl = document.getElementById("tblWrap");
+  calEl.style.display = currentView==="cal" ? "block" : "none";
+  tblEl.style.display = currentView==="tbl" ? "block" : "none";
+  renderCalendar(); renderPlanningTable();
+}
+function renderCalendar(){
+  var cyc = byId(STATE.cycles, currentCycleId);
+  if (!cyc){ document.getElementById("calWrap").innerHTML = "<div class='alert info'>Aucun cycle — générez-en un.</div>"; return; }
+  var ms = STATE.planning.filter(function(m){return m.cycleId===currentCycleId;});
+  var weeks = currentWeek===0 ? [1,2,3,4] : [currentWeek];
+  var h = "<div class='cal'>";
+  JOURS_C.forEach(function(j){ h += "<div class='head'>"+j+"</div>"; });
+  h += "</div>";
+  weeks.forEach(function(w){
+    h += "<div style='font-size:11.5px;color:var(--text-dim);margin:10px 0 5px;text-transform:uppercase;letter-spacing:.05em'>Semaine "+w+"</div><div class='cal'>";
+    for (var d=0; d<7; d++){
+      var dayIndex = (w-1)*7 + d;
+      var date = addDays(cyc.startDate, dayIndex);
+      var wi = weekdayIdx(date);
+      var dayMs = ms.filter(function(m){ return m.date===date; });
+      h += "<div class='day"+(STATE.joursActifs[wi]?"":" off")+"'><div class='dnum'>"+formatDateFR(date).slice(0,5)+"</div>";
+      dayMs.sort(function(a,b){ return a.creneauId.localeCompare(b.creneauId); });
+      dayMs.forEach(function(m){
+        var t = getAgent(m.testeurId), o = getAgent(m.observateurId), s = getSite(m.siteId);
+        h += "<div class='mi'><span class='cre'>"+getCreneau(m.creneauId).label+"</span>"+
+             "<span class='st'>"+escapeHtml(s?s.nom:"—")+"</span>"+
+             "<span class='st'><span class='agent-testeur'>"+escapeHtml(agentLabel(t))+"</span> · "+
+             "<span class='agent-observateur'>"+escapeHtml(agentLabel(o))+"</span></span>"+
+             (m.signalement!=="aucun"?"<span class='pill "+(m.signalement==="invalide"?"critique":"eleve")+"'>signalé</span>":"")+
+             "</div>";
+      });
+      h += "</div>";
+    }
+    h += "</div>";
+  });
+  document.getElementById("calWrap").innerHTML = h;
+}
+function renderPlanningTable(){
+  var ms = cycleMissions().slice();
+  ms.sort(function(a,b){
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.creneauId.localeCompare(b.creneauId);
+  });
+  var rows = "<tr><th>Date</th><th>Jour</th><th>Créneau</th><th>Site</th><th>Prestataire</th>"+
+             "<th>Testeur</th><th>Observateur</th><th style='width:200px'>Reconnaissance</th></tr>";
+  if (!ms.length){
+    rows += "<tr><td colspan='8' style='text-align:center;color:var(--text-dim);padding:22px'>Aucune mission — générez un cycle.</td></tr>";
+  }
+  ms.forEach(function(m){
+    var t=getAgent(m.testeurId), o=getAgent(m.observateurId), s=getSite(m.siteId);
+    var p = s?getPrestataire(s.prestataireId):null;
+    rows += "<tr><td>"+formatDateFR(m.date)+"</td><td>"+JOURS_C[m.jour]+"</td>";
+    rows += "<td>"+getCreneau(m.creneauId).label+(s&&s.nuit&&m.creneauId==="c5"?"<span class='tagnuit'>nuit</span>":"")+"</td>";
+    rows += "<td><select onchange='reassignSite(\""+m.id+"\",this.value)'>";
+    STATE.sites.forEach(function(x){ rows += "<option value='"+x.id+"'"+(x.id===m.siteId?" selected":"")+">"+escapeHtml(x.nom)+"</option>"; });
+    rows += "</select></td>";
+    rows += "<td>"+escapeHtml(p?p.nom:"—")+"</td>";
+    rows += "<td><span class='agent-testeur'>"+escapeHtml(agentLabel(t))+"</span> <span class='roleT'>T</span></td>";
+    rows += "<td><span class='agent-observateur'>"+escapeHtml(agentLabel(o))+"</span> <span class='roleO'>O</span></td>";
+    rows += "<td><select onchange='setSignalement(\""+m.id+"\",this.value)'>";
+    RECON_LEVELS.forEach(function(r){ rows += "<option value='"+r.id+"'"+(r.id===m.signalement?" selected":"")+">"+r.label+"</option>"; });
+    rows += "</select></td></tr>";
+  });
+  document.getElementById("tblPlanning").innerHTML = rows;
+}
+function reassignSite(id,siteId){
+  var m = STATE.planning.filter(function(x){return x.id===id;})[0];
+  if (m){ m.siteId = siteId; saveState(); renderExposition(); renderControles(); }
+}
+function setSignalement(id,val){
+  var m = STATE.planning.filter(function(x){return x.id===id;})[0];
+  if (m){ m.signalement = val; saveState(); renderExposition(); renderControles(); }
+}
+
+/* =========================================================
+   RENDU : EXPOSITION
+   ========================================================= */
+function refDateForCycle(){
+  var ms = STATE.planning.filter(function(m){return m.cycleId===currentCycleId;});
+  if (!ms.length) return new Date().toISOString().slice(0,10);
+  return ms.reduce(function(a,m){ return m.date>a?m.date:a; }, ms[0].date);
+}
+function renderExposition(){
+  var ref = refDateForCycle();
+  var ms = STATE.planning.filter(function(m){return m.cycleId===currentCycleId;});
+  var rows = "<tr><th>Agent</th><th>Profil</th><th>Missions 12 mois</th>"+
+    "<th>Max passages / site</th><th>Max missions / prestataire</th>"+
+    "<th>Créneau le + répété (cycle)</th><th>Reconnaissance (cycle)</th><th>Synthèse</th></tr>";
+  var nbCrit=0, nbElev=0;
+
+  STATE.agents.forEach(function(a){
+    var e = expositionAgent(STATE, a, ref);
+    var mine = ms.filter(function(m){return m.testeurId===a.id||m.observateurId===a.id;});
+    var cinfo = creneauAgent(STATE, a, ref, currentCycleId);
+    var pct = cinfo.pct, topId = cinfo.topId;
+    var recon = "aucun";
+    mine.forEach(function(m){
+      if (m.testeurId===a.id){
+        var ord={aucun:0,suspicion:1,invalide:2};
+        if (ord[m.signalement]>ord[recon]) recon = m.signalement;
+      }
+    });
+    var rSite  = classifyCount(e.maxSite, STATE.seuils.site);
+    var rPrest = classifyCount(e.maxPrest, STATE.seuils.prestataire);
+    var plancher = cinfo.total ? Math.ceil(cinfo.total/5)/cinfo.total*100 : 0;
+    var rCre   = (pct <= plancher + 0.01) ? "faible" : classifyPct(pct, STATE.seuils.creneau);
+    var rRec   = byId(RECON_LEVELS, recon).risk;
+    var glob   = worstRisk([rSite,rPrest,rCre,rRec]);
+    if (glob==="critique") nbCrit++; else if (glob==="eleve") nbElev++;
+
+    var siteObj = e.maxSiteId ? getSite(e.maxSiteId) : null;
+    var prestObj = e.maxPrestId ? getPrestataire(e.maxPrestId) : null;
+
+    rows += "<tr><td><b>"+escapeHtml(agentLabel(a))+"</b></td>";
+    rows += "<td>"+(a.profil==="testeur"?"<span class='roleT'>T</span>":"<span class='roleO'>O</span>")+
+            (a.polyvalent?" <span style='color:var(--text-dim);font-size:11px'>polyv.</span>":"")+"</td>";
+    rows += "<td>"+e.total+"</td>";
+    rows += "<td class='risk-cell "+rSite+"'>"+round1(e.maxSite)+" — "+escapeHtml(siteObj?siteObj.nom:"—")+"</td>";
+    rows += "<td class='risk-cell "+rPrest+"'>"+round1(e.maxPrest)+" — "+escapeHtml(prestObj?prestObj.nom:"—")+"</td>";
+    rows += "<td class='risk-cell "+rCre+"'>"+round1(pct)+" %"+(topId?" — "+getCreneau(topId).label:"")+
+            (pct>=STATE.seuils.creneau.faible && rCre==="faible" ? " <span style='font-weight:400;font-size:11px'>(plancher)</span>" : "")+"</td>";
+    rows += "<td class='risk-cell "+rRec+"'>"+byId(RECON_LEVELS,recon).label+"</td>";
+    rows += "<td><span class='pill "+glob+"'>"+riskLabel(glob)+"</span></td></tr>";
+  });
+  document.getElementById("tblExposition").innerHTML = rows;
+
+  var al;
+  if (!STATE.planning.length) al = "<div class='alert info'>Aucun cycle généré. Rendez-vous dans l'onglet « Génération ».</div>";
+  else if (nbCrit) al = "<div class='alert bad'><b>"+nbCrit+" agent(s) en risque Critique.</b> Action immédiate requise : rotation de site, réaffectation de prestataire, ou retrait du testeur reconnu.</div>";
+  else if (nbElev) al = "<div class='alert warn'><b>"+nbElev+" agent(s) en risque Élevé.</b> Le planning reste exploitable mais l'anonymat s'érode : anticipez la rotation au prochain cycle.</div>";
+  else al = "<div class='alert ok'><b>Objectif atteint.</b> Les "+STATE.agents.length+" agents sont en risque d'exposition Faible sur les 4 critères de la grille.</div>";
+  document.getElementById("alertZone").innerHTML = "<h2 style='margin-top:0'>Synthèse du cycle</h2>"+al;
+
+  renderCreneauDist(ms);
+  renderRoles();
+  renderSiteLoad(ms);
+}
+function renderCreneauDist(ms){
+  var cc = {}; CRENEAUX.forEach(function(c){ cc[c.id]=0; });
+  ms.forEach(function(m){ cc[m.creneauId]++; });
+  var rows = "<tr><th>Créneau</th><th>Volume pax</th><th>Missions</th><th>Part</th><th style='width:130px'></th></tr>";
+  var tot = ms.length || 1;
+  CRENEAUX.forEach(function(c){
+    var pct = cc[c.id]/tot*100;
+    rows += "<tr><td>"+c.label+"</td><td style='color:var(--text-dim);font-size:12px'>"+c.volume+"</td><td>"+cc[c.id]+"</td>"+
+      "<td>"+round1(pct)+" %</td><td><div class='bar'><i style='width:"+Math.min(100,pct*3)+"%'></i></div></td></tr>";
+  });
+  document.getElementById("tblCreneauDist").innerHTML = rows;
+}
+function renderRoles(){
+  var rows = "<tr><th>Agent</th><th>Testeur</th><th>Observateur</th><th>Équilibre</th></tr>";
+  STATE.agents.forEach(function(a){
+    var t=0,o=0;
+    STATE.planning.forEach(function(m){ if (m.testeurId===a.id) t++; if (m.observateurId===a.id) o++; });
+    var tot = t+o;
+    var pct = tot ? Math.round(t/tot*100) : 0;
+    var cls = (!tot || (pct>=35 && pct<=65)) ? "faible" : (pct>=20 && pct<=80 ? "eleve" : "critique");
+    rows += "<tr><td>"+escapeHtml(agentLabel(a))+"</td><td>"+t+"</td><td>"+o+"</td>"+
+      "<td class='risk-cell "+cls+"'>"+pct+" % testeur</td></tr>";
+  });
+  document.getElementById("tblRoles").innerHTML = rows;
+}
+function renderSiteLoad(ms){
+  var cnt = {};
+  ms.forEach(function(m){ cnt[m.siteId]=(cnt[m.siteId]||0)+1; });
+  var rows = "<tr><th>Site</th><th>Prestataire</th><th>Missions (cycle)</th><th style='width:200px'></th></tr>";
+  var mx = 1;
+  Object.keys(cnt).forEach(function(k){ if (cnt[k]>mx) mx=cnt[k]; });
+  STATE.sites.forEach(function(s){
+    var n = cnt[s.id]||0;
+    var p = getPrestataire(s.prestataireId);
+    rows += "<tr><td>"+escapeHtml(s.nom)+(s.nuit?"<span class='tagnuit'>nuit</span>":"")+"</td>"+
+      "<td style='color:var(--text-dim)'>"+escapeHtml(p?p.nom:"—")+"</td><td>"+n+"</td>"+
+      "<td><div class='bar'><i style='width:"+(n/mx*100)+"%'></i></div></td></tr>";
+  });
+  document.getElementById("tblSiteLoad").innerHTML = rows;
+}
+
+/* =========================================================
+   RENDU : CONTROLES
+   ========================================================= */
+function renderControles(){
+  var checks = runControles(STATE, currentCycleId);
+  var rows = "<tr><th style='width:44px'></th><th>Contrôle</th><th>Détail</th></tr>";
+  checks.forEach(function(c){
+    rows += "<tr><td style='text-align:center'>"+(c.ok?"<span class='pill faible'>OK</span>":"<span class='pill critique'>KO</span>")+"</td>"+
+      "<td><b>"+escapeHtml(c.nom)+"</b></td><td style='color:var(--text-dim)'>"+escapeHtml(c.detail)+"</td></tr>";
+  });
+  document.getElementById("tblControles").innerHTML = rows;
+  renderPairs();
+}
+function renderPairs(){
+  var ag = STATE.agents;
+  var pc = {};
+  STATE.planning.forEach(function(m){
+    var k = [m.testeurId,m.observateurId].sort().join("|");
+    pc[k] = (pc[k]||0)+1;
+  });
+  var rows = "<tr><th></th>"+ag.map(function(a){return "<th style='font-size:10px'>"+escapeHtml(agentLabel(a))+"</th>";}).join("")+"</tr>";
+  ag.forEach(function(a){
+    rows += "<tr><th style='font-size:10px'>"+escapeHtml(agentLabel(a))+"</th>";
+    ag.forEach(function(b){
+      if (a.id===b.id){ rows += "<td style='background:var(--panel-2)'></td>"; return; }
+      var n = pc[[a.id,b.id].sort().join("|")]||0;
+      var cls = n===0 ? "" : (n<=2 ? "faible" : (n<=4 ? "eleve" : "critique"));
+      rows += "<td class='"+(cls?"risk-cell "+cls:"")+"' style='text-align:center'>"+(n||"·")+"</td>";
+    });
+    rows += "</tr>";
+  });
+  document.getElementById("tblPairs").innerHTML = rows;
+}
+
+/* =========================================================
+   EXPORT / IMPORT
+   ========================================================= */
+function exportJSON(){
+  dl(new Blob([JSON.stringify(STATE,null,2)],{type:"application/json"}),
+     "planning-"+new Date().toISOString().slice(0,10)+".json");
+}
+function exportCSV(){
+  var head = ["Date","Jour","Creneau","Site","Prestataire","Testeur","Observateur","Reconnaissance"];
+  var lines = [head.join(";")];
+  STATE.planning.filter(function(m){return m.cycleId===currentCycleId;})
+    .sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:a.creneauId.localeCompare(b.creneauId)); })
+    .forEach(function(m){
+      var s=getSite(m.siteId), p=s?getPrestataire(s.prestataireId):null;
+      lines.push([formatDateFR(m.date), JOURS[m.jour], getCreneau(m.creneauId).label,
+        s?s.nom:"", p?p.nom:"", agentLabel(getAgent(m.testeurId)), agentLabel(getAgent(m.observateurId)),
+        byId(RECON_LEVELS,m.signalement).label].join(";"));
+    });
+  dl(new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv;charset=utf-8"}), "planning-cycle.csv");
+}
+function dl(blob,name){
+  var url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function importJSON(evt){
+  var f = evt.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function(e){
+    try{
+      var d = JSON.parse(e.target.result);
+      if (!d.agents || !d.sites) throw new Error("Format inattendu");
+      STATE = migrate(d); STATE.ver = CURRENT_VER;
+      currentCycleId = null;
+      saveState(); renderAll(); alert("Import réussi.");
+    }catch(err){ alert("Fichier JSON invalide : "+err.message); }
+  };
+  r.readAsText(f); evt.target.value = "";
+}
+function resetAll(){
+  if (!confirm("Réinitialiser toutes les données ?")) return;
+  STATE = defaultState(); currentCycleId = null; saveState(); renderAll();
+}
+
+/* =========================================================
+   ONGLETS & INIT
+   ========================================================= */
+var TABS = ["config","capacite","generation","planning","exposition","controles","data"];
+function switchTab(tab){
+  TABS.forEach(function(t){ document.getElementById("tab-"+t).style.display = (t===tab)?"block":"none"; });
+  var btns = document.querySelectorAll("#tabNav button");
+  for (var i=0;i<btns.length;i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-tab")===tab);
+  if (tab==="capacite")   renderCapacite();
+  if (tab==="generation"){ renderCyclesList(); renderGenWarn(); }
+  if (tab==="planning")   { renderCycleSelect(); renderPlanning(); }
+  if (tab==="exposition") renderExposition();
+  if (tab==="controles")  renderControles();
+}
+function renderAll(){
+  renderHeader(); renderAgents(); renderSites(); renderPrestataires();
+  renderCreneaux(); renderSeuils(); renderParams(); renderCapacite();
+  renderCyclesList(); renderGenWarn(); renderCycleSelect(); renderPlanning();
+  renderExposition(); renderControles();
+}
+function bindNum(id, key, after){
+  document.getElementById(id).addEventListener("change", function(){
+    STATE[key] = Number(this.value)||0; saveState(); if (after) after();
+  });
+}
+function bindChk(id, key, after){
+  document.getElementById(id).addEventListener("change", function(){
+    STATE[key] = this.checked; saveState(); if (after) after();
+  });
+}
+document.addEventListener("DOMContentLoaded", function(){
+  STATE = loadState();
+  bindNum("inMissionsCycle","missionsParCycle", function(){ renderParams(); renderCapacite(); });
+  document.getElementById("inFenetreCreneau").addEventListener("change", function(){
+    STATE.fenetreCreneau = this.value; saveState(); renderExposition(); renderControles();
+  });
+  bindNum("inPoidsTesteur","poidsTesteur", function(){ renderCapacite(); renderExposition(); });
+  bindNum("inPoidsObservateur","poidsObservateur", function(){ renderCapacite(); renderExposition(); });
+  bindNum("inSeed","seed", null);
+  bindChk("inModeStrict","modeStrict", null);
+  bindChk("inNuitReserve","nuitReserve", null);
+  bindChk("inAnonymise","anonymise", function(){ renderAll(); });
+  var btns = document.querySelectorAll("#tabNav button");
+  for (var i=0;i<btns.length;i++){
+    (function(b){ b.addEventListener("click", function(){ switchTab(b.getAttribute("data-tab")); }); })(btns[i]);
+  }
+  document.getElementById("inStartDate").value = defaultNextStartDate();
+  renderAll();
+});
+</script>
+</body>
+</html>
