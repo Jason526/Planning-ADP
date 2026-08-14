@@ -156,7 +156,8 @@
     <div class="desc">Ces cinq règles sont des contraintes <b>dures</b> : une mission qui les violerait n'est jamais créée.</div>
     <ul class="tight" style="font-size:13px;color:var(--text);">
       <li>Un agent ne peut appartenir qu'à <b>un seul binôme par jour</b> (donc jamais deux duos différents le même jour).</li>
-      <li>Un binôme reste sur <b>un seul site pour toute la journée</b>.</li>
+      <li>Un binôme reste sur <b>une seule plateforme pour toute la journée</b> : il peut enchaîner plusieurs missions sur des sites différents de cette plateforme, mais ne change jamais de plateforme en cours de journée.</li>
+      <li>Dans une même journée, un binôme ne repasse jamais sur un site déjà contrôlé et n'occupe jamais deux fois le même créneau.</li>
       <li>Chaque mission comporte exactement <b>1 testeur + 1 observateur</b> ; le rôle est figé le jour même.</li>
       <li>Le rôle attribué respecte la qualification de l'agent (testeur, observateur, ou polyvalent).</li>
       <li>En mode strict, aucune affectation ne fait franchir le seuil <span class="pill faible">Faible</span> sur les passages/site ou les missions/prestataire (12 mois glissants).</li>
@@ -175,12 +176,19 @@
     <div class="tbl-scroll"><table id="tblAgents"></table></div>
   </div>
 
+  <div class="panel">
+    <h2>Sites / Terminaux</h2>
+    <div class="desc">La <b>plateforme</b> definit les sites entre lesquels un meme binome peut se deplacer dans la journee. Cochez <b>Nuit</b> pour les sites dont le volume passagers reste eleve de 21h a 24h.</div>
+    <div class="toolbar"><button class="btn small" onclick="addSite()">+ Site</button></div>
+    <div class="tbl-scroll"><table id="tblSites"></table></div>
+  </div>
+
   <div class="row">
     <div class="panel">
-      <h2>Sites / Terminaux</h2>
-      <div class="desc">Cochez <b>Nuit</b> pour les sites dont le volume passagers reste élevé de 21h à 24h (Terminal 2E par ex.).</div>
-      <div class="toolbar"><button class="btn small" onclick="addSite()">+ Site</button></div>
-      <div class="tbl-scroll"><table id="tblSites"></table></div>
+      <h2>Plateformes</h2>
+      <div class="desc">Un binome constitue le matin peut circuler librement entre les sites d'une meme plateforme jusqu'au soir. Il ne peut pas franchir la frontiere entre deux plateformes le meme jour.</div>
+      <div class="toolbar"><button class="btn small" onclick="addPlateforme()">+ Plateforme</button></div>
+      <div class="tbl-scroll"><table id="tblPlateformes"></table></div>
     </div>
     <div class="panel">
       <h2>Prestataires</h2>
@@ -215,6 +223,19 @@
       <div class="desc" id="creneauQuotaHint"></div>
       <label style="margin-bottom:6px;">Jours d'activité</label>
       <div id="joursActifs" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <div class="grid-2" style="max-width:520px;">
+        <div class="field">
+          <label>Missions max par binome et par jour</label>
+          <input type="number" id="inMaxDuoJour" min="1" max="5">
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end;">
+          <label class="check" style="margin:0 0 8px;">
+            <input type="checkbox" id="inRegrouper">
+            Regrouper les missions d'une journee sur un meme binome
+          </label>
+        </div>
+      </div>
+      <div class="desc" id="regrouperHint"></div>
       <div class="check">
         <input type="checkbox" id="inNuitReserve">
         <label for="inNuitReserve" style="margin:0;">Réserver le créneau 21h–24h aux sites à activité nocturne</label>
@@ -373,7 +394,7 @@
    ========================================================= */
 var LS_VER_KEY = "planning4s_ver";
 var LS_DATA_KEY = "planning4s_data";
-var CURRENT_VER = "5";
+var CURRENT_VER = "6";
 
 var JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 var JOURS_C = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
@@ -401,31 +422,37 @@ function defaultState(){
   for (i=1;i<=9;i++){  agents.push({id:"a"+i, nom:"Agent "+i, code:"T-"+pad2(i), profil:"testeur",     polyvalent:true}); }
   for (i=1;i<=5;i++){  agents.push({id:"b"+i, nom:"Agent "+(9+i), code:"O-"+pad2(i), profil:"observateur", polyvalent:true}); }
 
-var prestataires = [
-    {id:"p1", nom:"SERIS"},
-    {id:"p2", nom:"HUBSAFE"},
-    {id:"p3", nom:"WATCHOVER"}
+  var prestataires = [
+    {id:"p1", nom:"Prestataire A"},
+    {id:"p2", nom:"Prestataire B"},
+    {id:"p3", nom:"Prestataire C"}
+  ];
+
+  // Une plateforme regroupe les sites entre lesquels un même binôme
+  // peut se déplacer au cours d'une même journée.
+  var plateformes = [
+    {id:"pf1", nom:"Orly / PARIF"},
+    {id:"pf2", nom:"CDG"},
+    {id:"pf3", nom:"Le Bourget"}
   ];
 
   var sites = [
-    {id:"s1", nom:"Orly 1", prestataireId:"p2", special2E:false},
-    {id:"s2", nom:"Orly 2", prestataireId:"p3", special2E:false},
-    {id:"s3", nom:"Orly 3", prestataireId:"p3", special2E:false},
-    {id:"s4", nom:"Orly 4", prestataireId:"p2", special2E:false},
-    
-    {id:"s5", nom:"CDG 9 Terminal 1-3", prestataireId:"p2", special2E:false},
-    {id:"s6", nom:"CDG 9 Terminal 2 AC 2 BD", prestataireId:"p2", special2E:false},
-    {id:"s7", nom:"CDG Terminal 2E KLM", prestataireId:"p3", special2E:true},
-    {id:"s8", nom:"CDG 9 Terminal 2F", prestataireId:"p1", special2E:false},
-    {id:"s9", nom:"CDG 9 Terminal 2G", prestataireId:"p1", special2E:false},    
-    {id:"s10", nom:"CDG 9 Terminal T2EF", prestataireId:"p1", special2E:false},
-    {id:"s11", nom:"CDG 9 HUB AF", prestataireId:"p1", special2E:false},
-    {id:"s12", nom:"CDG 9 Base Bus", prestataireId:"p1", special2E:false},
-    {id:"s13", nom:"CDGU", prestataireId:"p2", special2E:false},
-    
-    {id:"s14", nom:"ECP", prestataireId:"p1", special2E:false},    
-    {id:"s15", nom:"LBG", prestataireId:"p1", special2E:false},
-    {id:"s16", nom:"Hors aérogares PARIF", prestataireId:"p2", special2E:false},
+    {id:"s1",  nom:"Orly 1",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
+    {id:"s2",  nom:"Orly 2",                     prestataireId:"p3", plateformeId:"pf1", nuit:false},
+    {id:"s3",  nom:"Orly 3",                     prestataireId:"p3", plateformeId:"pf1", nuit:false},
+    {id:"s4",  nom:"Orly 4",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
+    {id:"s15", nom:"Hors aérogares PARIF",       prestataireId:"p2", plateformeId:"pf1", nuit:false},
+    {id:"s5",  nom:"CDG 9 Terminal 1-3",         prestataireId:"p2", plateformeId:"pf2", nuit:false},
+    {id:"s6",  nom:"CDG 9 Terminal 2 AC 2 BD",   prestataireId:"p2", plateformeId:"pf2", nuit:false},
+    {id:"s7",  nom:"CDG Terminal 2E KLM",        prestataireId:"p3", plateformeId:"pf2", nuit:true},
+    {id:"s8",  nom:"CDG 9 Terminal 2F",          prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s9",  nom:"CDG 9 Terminal 2G",          prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s10", nom:"CDG 9 Terminal T2EF",        prestataireId:"p1", plateformeId:"pf2", nuit:true},
+    {id:"s11", nom:"CDG 9 HUB AF",               prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s16", nom:"CDG 9 Base Bus",             prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s12", nom:"CDGU",                       prestataireId:"p2", plateformeId:"pf2", nuit:false},
+    {id:"s13", nom:"ECP",                        prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s14", nom:"LBG",                        prestataireId:"p1", plateformeId:"pf3", nuit:false}
   ];
 
   return {
@@ -433,12 +460,15 @@ var prestataires = [
     agents: agents,
     sites: sites,
     prestataires: prestataires,
+    plateformes: plateformes,
     seuils: {
       site:        {faible:2,  eleve:4,  action:"Rotation"},
       prestataire: {faible:3,  eleve:6,  action:"Réaffectation"},
       creneau:     {faible:25, eleve:50, action:"Changement de planning"}
     },
     missionsParCycle: 35,
+    maxMissionsDuoJour: 2,
+    regrouperJournee: true,
     fenetreCreneau: "12mois",
     joursActifs: [true,true,true,true,true,true,true],
     poidsTesteur: 1,
@@ -481,7 +511,17 @@ function migrate(s){
     if (a.polyvalent === undefined) a.polyvalent = true;
     if (!a.code) a.code = (a.profil==="testeur"?"T-":"O-")+pad2(i+1);
   });
-  s.sites.forEach(function(x){ if (x.nuit === undefined) x.nuit = !!x.special2E; });
+  s.sites.forEach(function(x){
+    if (x.nuit === undefined) x.nuit = !!x.special2E;
+    if (!x.plateformeId){
+      var n = (x.nom||"").toUpperCase();
+      if (n.indexOf("ORLY")>=0 || n.indexOf("PARIF")>=0) x.plateformeId = "pf1";
+      else if (n.indexOf("LBG")>=0 || n.indexOf("BOURGET")>=0) x.plateformeId = "pf3";
+      else x.plateformeId = "pf2";
+    }
+  });
+  var pfIds = {}; s.plateformes.forEach(function(p){ pfIds[p.id]=1; });
+  s.sites.forEach(function(x){ if (!pfIds[x.plateformeId]) x.plateformeId = s.plateformes[0].id; });
   return s;
 }
 
@@ -492,6 +532,7 @@ function uid(p){ return p+"-"+Math.random().toString(36).slice(2,9); }
 function byId(arr,id){ for (var i=0;i<arr.length;i++){ if (arr[i].id===id) return arr[i]; } return null; }
 function getSite(id){ return byId(STATE.sites,id); }
 function getPrestataire(id){ return byId(STATE.prestataires,id); }
+function getPlateforme(id){ return byId(STATE.plateformes,id); }
 function getAgent(id){ return byId(STATE.agents,id); }
 function getCreneau(id){ return byId(CRENEAUX,id); }
 function agentLabel(a){ if (!a) return "—"; return STATE.anonymise ? a.code : a.nom; }
@@ -633,13 +674,15 @@ function generateCycleCore(st, startDate, cycleId, seed){
   if (!days.length){ res.warnings.push("Aucun jour d'activité sélectionné."); return res; }
 
   var maxDuosJour = Math.floor(agents.length/2);
+  var maxParDuo = Math.max(1, Number(st.maxMissionsDuoJour)||1);
+  var maxMissionsJour = maxDuosJour * maxParDuo;
   var maxParAgent = Math.max(1, Math.ceil(2*N/agents.length));
 
   var perDay = [];
   var base = Math.floor(N/days.length), rem = N % days.length;
   for (var i=0;i<days.length;i++) perDay.push(base);
   shuffleRng(days.map(function(_,k){return k;}), rng).slice(0,rem).forEach(function(k){ perDay[k]++; });
-  for (i=0;i<days.length;i++){ if (perDay[i] > maxDuosJour) perDay[i] = maxDuosJour; }
+  for (i=0;i<days.length;i++){ if (perDay[i] > maxMissionsJour) perDay[i] = maxMissionsJour; }
 
   // nombre de missions attendu par agent sur ce cycle, puis quota de créneaux
   var expected = {};
@@ -666,23 +709,61 @@ function generateCycleCore(st, startDate, cycleId, seed){
 
   for (var di=0; di<days.length; di++){
     var day = days[di];
-    var usedToday = {};
+    var usedToday = {};   // agents déjà engagés ce jour-là
+    var duosJour = [];    // binômes constitués ce jour-là
     var target = perDay[di] + carry;
-    if (target > maxDuosJour){ carry = target - maxDuosJour; target = maxDuosJour; }
+    if (target > maxMissionsJour){ carry = target - maxMissionsJour; target = maxMissionsJour; }
     else carry = 0;
     var placed = 0;
     for (var k=0;k<target;k++){
-      var duo = buildDuo(day, usedToday, true) || buildDuo(day, usedToday, false);
-      if (!duo) break;
-      res.missions.push(duo);
+      var m = placeMission(day, usedToday, duosJour);
+      if (!m) break;
+      res.missions.push(m);
       placed++;
     }
     carry += (target - placed);
   }
   res.unplaced = N - res.missions.length;
 
-  /* ---- construction d'un binôme ---- */
-  function buildDuo(day, usedToday, strictCre){
+  /* ---- placement d'une mission ----
+     Un binôme déjà constitué dans la journée peut enchaîner une autre mission,
+     à condition de rester sur la même plateforme, sur un autre site et un autre créneau.
+     Ses rôles testeur / observateur restent figés pour toute la journée. */
+  function placeMission(day, usedToday, duosJour){
+    // On épuise d'abord toutes les options qui respectent le quota de créneaux
+    // de chaque agent ; on ne relâche cette contrainte qu'en dernier recours.
+    if (st.regrouperJournee){
+      return prolongerDuo(day, duosJour, true)  || nouveauDuo(day, usedToday, duosJour, true)
+          || prolongerDuo(day, duosJour, false) || nouveauDuo(day, usedToday, duosJour, false);
+    }
+    return nouveauDuo(day, usedToday, duosJour, true)  || prolongerDuo(day, duosJour, true)
+        || nouveauDuo(day, usedToday, duosJour, false) || prolongerDuo(day, duosJour, false);
+  }
+
+  /* ---- prolonger un binôme déjà sur le terrain ---- */
+  function prolongerDuo(day, duosJour, strictCre){
+    var cands = duosJour.filter(function(d){
+      return d.count < maxParDuo && cntCycle[d.A.id] < maxParAgent && cntCycle[d.B.id] < maxParAgent;
+    });
+    if (!cands.length) return null;
+    cands.sort(function(a,b){ return a.count - b.count; });
+
+    for (var i=0;i<cands.length;i++){
+      var duo = cands[i];
+      var creList = orderedCreneaux(duo.A, duo.B, strictCre);
+      for (var ci=0; ci<creList.length; ci++){
+        var cre = creList[ci];
+        if (duo.creneaux[cre.id]) continue;            // créneau déjà occupé dans la journée
+        var site = chooseSite(duo.testeur, duo.observateur, cre, duo.plateformeId, duo.sites);
+        if (!site) continue;
+        return commit(day, duo, cre, site);
+      }
+    }
+    return null;
+  }
+
+  /* ---- constituer un nouveau binôme ---- */
+  function nouveauDuo(day, usedToday, duosJour, strictCre){
     var avail = agents.filter(function(a){
       return !usedToday[a.id] && cntCycle[a.id] < maxParAgent;
     });
@@ -693,56 +774,69 @@ function generateCycleCore(st, startDate, cycleId, seed){
       return used12[x.id] - used12[y.id];
     });
 
-    for (var ai=0; ai<avail.length; ai++){
-      var A = avail[ai];
-      var partners = shuffleRng(avail.filter(function(b){ return b.id !== A.id; }), rng);
-      partners.sort(function(x,y){
-        var px = pairCount[A.id][x.id]||0, py = pairCount[A.id][y.id]||0;
-        if (px !== py) return px - py;
-        if (cntCycle[x.id] !== cntCycle[y.id]) return cntCycle[x.id] - cntCycle[y.id];
-        if (used12[x.id] !== used12[y.id]) return used12[x.id] - used12[y.id];
-        return 0;
-      });
+    {
+      for (var ai=0; ai<avail.length; ai++){
+        var A = avail[ai];
+        var partners = shuffleRng(avail.filter(function(b){ return b.id !== A.id; }), rng);
+        partners.sort(function(x,y){
+          var px = pairCount[A.id][x.id]||0, py = pairCount[A.id][y.id]||0;
+          if (px !== py) return px - py;
+          if (cntCycle[x.id] !== cntCycle[y.id]) return cntCycle[x.id] - cntCycle[y.id];
+          if (used12[x.id] !== used12[y.id]) return used12[x.id] - used12[y.id];
+          return 0;
+        });
 
-      for (var bi=0; bi<partners.length; bi++){
-        var B = partners[bi];
-        var roles = assignRoles(A,B);
-        if (!roles){ res.blockedPair++; continue; }
-
-        var creList = orderedCreneaux(A,B,strictCre);
-        if (!creList.length) continue;
-        for (var ci=0; ci<creList.length; ci++){
-          var cre = creList[ci];
-          var site = chooseSite(roles.testeur, roles.observateur, cre);
-          if (!site) continue;
-
-          cntCycle[A.id]++; cntCycle[B.id]++;
-          used12[A.id]++;   used12[B.id]++;
-          usedToday[A.id] = true; usedToday[B.id] = true;
-          globalCre[cre.id]++; globalSite[site.id]++;
-          quota[A.id][cre.id]--; quota[B.id][cre.id]--;
-          cntCre[A.id][cre.id] = (cntCre[A.id][cre.id]||0)+1;
-          cntCre[B.id][cre.id] = (cntCre[B.id][cre.id]||0)+1;
-          pairCount[A.id][B.id] = (pairCount[A.id][B.id]||0)+1;
-          pairCount[B.id][A.id] = (pairCount[B.id][A.id]||0)+1;
-          nbT[roles.testeur.id]++; nbO[roles.observateur.id]++;
-          cntSite[roles.testeur.id][site.id]     = (cntSite[roles.testeur.id][site.id]||0) + poids.testeur;
-          cntSite[roles.observateur.id][site.id] = (cntSite[roles.observateur.id][site.id]||0) + poids.observateur;
-          cntPrest[roles.testeur.id][site.prestataireId]     = (cntPrest[roles.testeur.id][site.prestataireId]||0) + poids.testeur;
-          cntPrest[roles.observateur.id][site.prestataireId] = (cntPrest[roles.observateur.id][site.prestataireId]||0) + poids.observateur;
-
-          return {
-            id: cycleId+"-m"+(missionCounter++),
-            cycleId: cycleId, semaine: day.semaine, jour: day.jour, date: day.date,
-            creneauId: cre.id, siteId: site.id,
-            testeurId: roles.testeur.id, observateurId: roles.observateur.id,
-            signalement: "aucun"
-          };
+        for (var bi=0; bi<partners.length; bi++){
+          var B = partners[bi];
+          var roles = assignRoles(A,B);
+          if (!roles){ res.blockedPair++; continue; }
+          var creList = orderedCreneaux(A,B,strictCre);
+          if (!creList.length) continue;
+          for (var ci=0; ci<creList.length; ci++){
+            var cre = creList[ci];
+            var site = chooseSite(roles.testeur, roles.observateur, cre, null, {});
+            if (!site) continue;
+            var duo = {
+              A:A, B:B, testeur:roles.testeur, observateur:roles.observateur,
+              plateformeId: site.plateformeId, creneaux:{}, sites:{}, count:0
+            };
+            duosJour.push(duo);
+            usedToday[A.id] = true; usedToday[B.id] = true;
+            pairCount[A.id][B.id] = (pairCount[A.id][B.id]||0)+1;
+            pairCount[B.id][A.id] = (pairCount[B.id][A.id]||0)+1;
+            nbT[roles.testeur.id]++; nbO[roles.observateur.id]++;
+            return commit(day, duo, cre, site);
+          }
+          res.blockedSite++;
         }
-        res.blockedSite++;
       }
     }
     return null;
+  }
+
+  /* ---- enregistrement d'une mission ---- */
+  function commit(day, duo, cre, site){
+    var A = duo.A, B = duo.B, T = duo.testeur, O = duo.observateur;
+    duo.count++; duo.creneaux[cre.id] = true; duo.sites[site.id] = true;
+    cntCycle[A.id]++; cntCycle[B.id]++;
+    used12[A.id]++;   used12[B.id]++;
+    globalCre[cre.id]++; globalSite[site.id]++;
+    cntCre[A.id][cre.id] = (cntCre[A.id][cre.id]||0)+1;
+    cntCre[B.id][cre.id] = (cntCre[B.id][cre.id]||0)+1;
+    if (quota[A.id][cre.id] > 0) quota[A.id][cre.id]--;
+    if (quota[B.id][cre.id] > 0) quota[B.id][cre.id]--;
+    cntSite[T.id][site.id]  = (cntSite[T.id][site.id]||0)  + poids.testeur;
+    cntSite[O.id][site.id]  = (cntSite[O.id][site.id]||0)  + poids.observateur;
+    cntPrest[T.id][site.prestataireId] = (cntPrest[T.id][site.prestataireId]||0) + poids.testeur;
+    cntPrest[O.id][site.prestataireId] = (cntPrest[O.id][site.prestataireId]||0) + poids.observateur;
+
+    return {
+      id: cycleId+"-m"+(missionCounter++),
+      cycleId: cycleId, semaine: day.semaine, jour: day.jour, date: day.date,
+      creneauId: cre.id, siteId: site.id, plateformeId: site.plateformeId,
+      testeurId: T.id, observateurId: O.id,
+      ordreJour: duo.count, signalement: "aucun"
+    };
   }
 
   /* rôle : qualification respectée puis rééquilibrage testeur / observateur */
@@ -780,8 +874,11 @@ function generateCycleCore(st, startDate, cycleId, seed){
   }
 
   /* site : plafonds durs 12 mois glissants, puis exposition minimale */
-  function chooseSite(T,O,cre){
+  function chooseSite(T,O,cre,plateformeId,sitesExclus){
     var pool = st.sites;
+    if (plateformeId) pool = pool.filter(function(s){ return s.plateformeId === plateformeId; });
+    if (sitesExclus)  pool = pool.filter(function(s){ return !sitesExclus[s.id]; });
+    if (!pool.length) return null;
     if (st.nuitReserve && cre.id === "c5"){
       var np = pool.filter(function(s){ return s.nuit; });
       if (np.length) pool = np;
@@ -830,28 +927,51 @@ function runControles(st, cycleId){
 
   if (ms.length === 0){ return [{nom:"Cycle sélectionné", ok:false, detail:"Aucune mission — générez un cycle."}]; }
 
-  // 1. un seul duo par agent et par jour
-  var byDayAgent = {}, dup = [];
+  // 1. un seul binôme par agent et par jour (plusieurs missions avec CE binôme restent autorisées)
+  var partenaireDuJour = {}, dup = 0;
   ms.forEach(function(m){
-    [m.testeurId, m.observateurId].forEach(function(id){
-      var k = m.date+"|"+id;
-      if (byDayAgent[k]) dup.push(k); else byDayAgent[k] = m;
+    [[m.testeurId,m.observateurId],[m.observateurId,m.testeurId]].forEach(function(pr){
+      var k = m.date+"|"+pr[0];
+      if (partenaireDuJour[k] && partenaireDuJour[k] !== pr[1]) dup++;
+      partenaireDuJour[k] = pr[1];
     });
   });
-  add("Un seul binôme par agent et par jour", dup.length===0,
-      dup.length===0 ? ms.length+" missions vérifiées" : dup.length+" conflit(s)");
+  add("Un seul binôme par agent et par jour", dup===0,
+      dup===0 ? ms.length+" missions vérifiées, aucun agent n'a changé de partenaire en cours de journée"
+              : dup+" changement(s) de partenaire");
 
-  // 2. un seul site par agent et par jour (corollaire du 1, vérifié séparément)
-  var siteConflicts = 0, seen = {};
+  // 2. déplacements de la journée : même plateforme, sites distincts, créneaux distincts, rôles figés
+  var jour = {};
   ms.forEach(function(m){
-    [m.testeurId, m.observateurId].forEach(function(id){
-      var k = m.date+"|"+id;
-      if (seen[k] && seen[k] !== m.siteId) siteConflicts++;
-      seen[k] = m.siteId;
-    });
+    var key = m.date+"|"+[m.testeurId,m.observateurId].sort().join("-");
+    if (!jour[key]) jour[key] = [];
+    jour[key].push(m);
   });
-  add("Un seul site par agent et par jour", siteConflicts===0,
-      siteConflicts===0 ? "Aucun déplacement inter-site dans la journée" : siteConflicts+" conflit(s)");
+  var pfConflict=0, siteRepeat=0, creConflict=0, roleSwap=0, multi=0, maxJour=1;
+  Object.keys(jour).forEach(function(k){
+    var list = jour[k];
+    if (list.length > 1) multi++;
+    if (list.length > maxJour) maxJour = list.length;
+    var pf={}, si={}, cr={}, tid=list[0].testeurId;
+    list.forEach(function(m){
+      var s2 = byId(st.sites,m.siteId);
+      pf[s2?s2.plateformeId:"?"] = 1;
+      if (si[m.siteId]) siteRepeat++; si[m.siteId]=1;
+      if (cr[m.creneauId]) creConflict++; cr[m.creneauId]=1;
+      if (m.testeurId !== tid) roleSwap++;
+    });
+    if (Object.keys(pf).length > 1) pfConflict++;
+  });
+  add("Déplacements dans la journée limités à une même plateforme", pfConflict===0,
+      pfConflict===0
+        ? multi+" binôme-journée(s) enchaînent plusieurs missions, jusqu'à "+maxJour+" — toujours sur la même plateforme"
+        : pfConflict+" binôme(s) changent de plateforme dans la journée");
+  add("Aucun second passage sur un site déjà visité le jour même", siteRepeat===0,
+      siteRepeat===0 ? "Chaque site n'est vu qu'une fois par binôme et par jour" : siteRepeat+" doublon(s)");
+  add("Créneaux distincts pour un binôme dans la journée", creConflict===0,
+      creConflict===0 ? "Aucun chevauchement horaire" : creConflict+" chevauchement(s)");
+  add("Rôles figés pour toute la journée", roleSwap===0,
+      roleSwap===0 ? "Aucune bascule testeur / observateur en cours de journée" : roleSwap+" bascule(s)");
 
   // 3. composition 1 testeur + 1 observateur
   var badComp = ms.filter(function(m){ return !m.testeurId || !m.observateurId || m.testeurId===m.observateurId; }).length;
@@ -915,8 +1035,12 @@ function runControles(st, cycleId){
   // 8. binômes récurrents
   var winStart = addDays(end,-364);
   var pc = {}, maxPair = 0, maxPairLbl = "—";
+  var vus = {};
   st.planning.filter(function(m){ return m.date>=winStart && m.date<=end; }).forEach(function(m){
     var k = [m.testeurId,m.observateurId].sort().join("|");
+    // un binôme qui enchaîne 2 missions le même jour ne compte que pour une sortie commune
+    if (vus[m.date+"|"+k]) return;
+    vus[m.date+"|"+k] = 1;
     pc[k] = (pc[k]||0)+1;
     if (pc[k] > maxPair){
       maxPair = pc[k];
@@ -925,7 +1049,7 @@ function runControles(st, cycleId){
     }
   });
   add("Aucun binôme fortement récurrent (≤ 3 sur 12 mois)", maxPair <= 3,
-      "Binôme le plus fréquent : "+maxPairLbl+" — "+maxPair+" fois sur 12 mois");
+      "Binôme le plus fréquent : "+maxPairLbl+" — "+maxPair+" journée(s) commune(s) sur 12 mois");
 
   // 9. reconnaissance
   var recon = ms.filter(function(m){ return m.signalement !== "aucun"; });
@@ -995,6 +1119,7 @@ function renderHeader(){
     "<span><b>"+nbT+"</b> profils testeur</span>"+
     "<span><b>"+nbO+"</b> profils observateur</span>"+
     "<span><b>"+STATE.sites.length+"</b> sites</span>"+
+    "<span><b>"+STATE.plateformes.length+"</b> plateformes</span>"+
     "<span><b>"+STATE.prestataires.length+"</b> prestataires</span>"+
     "<span><b>"+STATE.planning.length+"</b> missions</span>";
 }
@@ -1062,10 +1187,18 @@ function setAllPolyvalent(v){
    RENDU : SITES / PRESTATAIRES
    ========================================================= */
 function renderSites(){
-  var rows = "<tr><th>Site</th><th style='width:160px'>Prestataire</th><th style='width:70px'>Nuit</th><th style='width:44px'></th></tr>";
-  STATE.sites.forEach(function(s){
+  var rows = "<tr><th>Site</th><th style='width:150px'>Plateforme</th><th style='width:150px'>Prestataire</th><th style='width:60px'>Nuit</th><th style='width:44px'></th></tr>";
+  var pfOrder = STATE.plateformes.map(function(p){return p.id;});
+  STATE.sites.slice().sort(function(a,b){
+    return pfOrder.indexOf(a.plateformeId) - pfOrder.indexOf(b.plateformeId);
+  }).forEach(function(s){
     rows += "<tr><td><input type='text' value='"+escapeAttr(s.nom)+"' onchange='updSite(\""+s.id+"\",\"nom\",this.value)'>"+
       (s.nuit?"<span class='tagnuit'>21–24h élevé</span>":"")+"</td>";
+    rows += "<td><select onchange='updSite(\""+s.id+"\",\"plateformeId\",this.value)'>";
+    STATE.plateformes.forEach(function(pf){
+      rows += "<option value='"+pf.id+"'"+(pf.id===s.plateformeId?" selected":"")+">"+escapeHtml(pf.nom)+"</option>";
+    });
+    rows += "</select></td>";
     rows += "<td><select onchange='updSite(\""+s.id+"\",\"prestataireId\",this.value)'>";
     STATE.prestataires.forEach(function(p){
       rows += "<option value='"+p.id+"'"+(p.id===s.prestataireId?" selected":"")+">"+escapeHtml(p.nom)+"</option>";
@@ -1077,15 +1210,37 @@ function renderSites(){
   });
   document.getElementById("tblSites").innerHTML = rows;
 }
-function updSite(id,champ,val){ var s=getSite(id); if(s){ s[champ]=val; saveState(); renderSites(); renderPrestataires(); renderCapacite(); } }
+function updSite(id,champ,val){ var s=getSite(id); if(s){ s[champ]=val; saveState(); renderSites(); renderPlateformes(); renderPrestataires(); renderCapacite(); } }
 function addSite(){
   STATE.sites.push({id:uid("s"), nom:"Site "+(STATE.sites.length+1),
-    prestataireId: STATE.prestataires.length?STATE.prestataires[0].id:null, nuit:false});
+    prestataireId: STATE.prestataires.length?STATE.prestataires[0].id:null,
+    plateformeId: STATE.plateformes.length?STATE.plateformes[0].id:null, nuit:false});
   saveState(); renderAll();
 }
 function removeSite(id){
   STATE.sites = STATE.sites.filter(function(s){return s.id!==id;});
   STATE.planning = STATE.planning.filter(function(m){return m.siteId!==id;});
+  saveState(); renderAll();
+}
+function renderPlateformes(){
+  var rows = "<tr><th>Plateforme</th><th style='width:70px'>Sites</th><th style='width:44px'></th></tr>";
+  STATE.plateformes.forEach(function(p){
+    var n = STATE.sites.filter(function(s){return s.plateformeId===p.id;}).length;
+    rows += "<tr><td><input type='text' value='"+escapeAttr(p.nom)+"' onchange='updPlateforme(\""+p.id+"\",this.value)'></td>"+
+      "<td>"+n+"</td><td><button class='icon-btn' onclick='removePlateforme(\""+p.id+"\")'>&#10005;</button></td></tr>";
+  });
+  document.getElementById("tblPlateformes").innerHTML = rows;
+}
+function updPlateforme(id,val){ var p=getPlateforme(id); if(p){ p.nom=val; saveState(); renderSites(); } }
+function addPlateforme(){
+  STATE.plateformes.push({id:uid("pf"), nom:"Plateforme "+(STATE.plateformes.length+1)});
+  saveState(); renderAll();
+}
+function removePlateforme(id){
+  if (STATE.sites.some(function(s){return s.plateformeId===id;})){
+    alert("Cette plateforme contient encore des sites. Rattachez-les ailleurs avant de la supprimer."); return;
+  }
+  STATE.plateformes = STATE.plateformes.filter(function(p){return p.id!==id;});
   saveState(); renderAll();
 }
 function renderPrestataires(){
@@ -1149,6 +1304,8 @@ function updSeuil(cat,lvl,val){
 function renderParams(){
   document.getElementById("inMissionsCycle").value  = STATE.missionsParCycle;
   document.getElementById("inFenetreCreneau").value = STATE.fenetreCreneau;
+  document.getElementById("inMaxDuoJour").value    = STATE.maxMissionsDuoJour;
+  document.getElementById("inRegrouper").checked   = STATE.regrouperJournee;
   document.getElementById("inPoidsTesteur").value    = STATE.poidsTesteur;
   document.getElementById("inPoidsObservateur").value= STATE.poidsObservateur;
   document.getElementById("inModeStrict").checked    = STATE.modeStrict;
@@ -1172,6 +1329,15 @@ function renderParams(){
     "Les agents tournent : tous ne sortent pas à chaque cycle, ce qui est précisément ce qui préserve leur budget d'exposition.";
   if (parAgent >= 5 && parAgent % 5 === 0) txt += " Ce volume est un multiple de 5 : chaque agent obtiendra exactement 20 % de missions par tranche horaire.";
   document.getElementById("creneauQuotaHint").innerHTML = txt;
+
+  var mx = STATE.maxMissionsDuoJour;
+  var hint = mx <= 1
+    ? "Un binôme ne fait qu'une mission par jour : chaque mission mobilise un nouveau binôme, c'est le maximum de dispersion mais cela consomme beaucoup d'agents."
+    : "Un binôme peut enchaîner jusqu'à "+mx+" missions dans la journée, sur "+mx+" sites différents d'une même plateforme et "+mx+" créneaux différents. "+
+      (STATE.regrouperJournee
+        ? "<b>Regroupement actif</b> : l'algorithme remplit d'abord la journée d'un binôme avant d'en constituer un nouveau. Moins d'agents mobilisés, tournées cohérentes, mais budget d'exposition consommé plus vite pour ces agents."
+        : "<b>Regroupement inactif</b> : l'algorithme préfère constituer un nouveau binôme tant que des agents sont disponibles, et n'enchaîne que si la charge du jour l'exige. C'est le réglage le plus protecteur pour l'anonymat.");
+  document.getElementById("regrouperHint").innerHTML = hint;
 }
 function toggleJour(i,v){ STATE.joursActifs[i]=v; saveState(); renderParams(); }
 
@@ -1384,14 +1550,29 @@ function renderCalendar(){
       var dayMs = ms.filter(function(m){ return m.date===date; });
       h += "<div class='day"+(STATE.joursActifs[wi]?"":" off")+"'><div class='dnum'>"+formatDateFR(date).slice(0,5)+"</div>";
       dayMs.sort(function(a,b){ return a.creneauId.localeCompare(b.creneauId); });
+      // regroupement par binôme : une tuile = une journée d'un binôme
+      var groupes = {}, ordre = [];
       dayMs.forEach(function(m){
-        var t = getAgent(m.testeurId), o = getAgent(m.observateurId), s = getSite(m.siteId);
-        h += "<div class='mi'><span class='cre'>"+getCreneau(m.creneauId).label+"</span>"+
-             "<span class='st'>"+escapeHtml(s?s.nom:"—")+"</span>"+
-             "<span class='st'><span class='agent-testeur'>"+escapeHtml(agentLabel(t))+"</span> · "+
-             "<span class='agent-observateur'>"+escapeHtml(agentLabel(o))+"</span></span>"+
-             (m.signalement!=="aucun"?"<span class='pill "+(m.signalement==="invalide"?"critique":"eleve")+"'>signalé</span>":"")+
-             "</div>";
+        var k = [m.testeurId,m.observateurId].sort().join("-");
+        if (!groupes[k]){ groupes[k] = []; ordre.push(k); }
+        groupes[k].push(m);
+      });
+      ordre.forEach(function(k){
+        var list = groupes[k], m0 = list[0];
+        var t = getAgent(m0.testeurId), o = getAgent(m0.observateurId);
+        var s0 = getSite(m0.siteId);
+        var pf = s0 ? getPlateforme(s0.plateformeId) : null;
+        h += "<div class='mi'>";
+        h += "<span class='st' style='color:var(--accent-2);font-weight:700'>"+escapeHtml(pf?pf.nom:"—")+
+             (list.length>1 ? " <span class='tagnuit'>"+list.length+" sites</span>" : "")+"</span>";
+        list.forEach(function(m){
+          var s2 = getSite(m.siteId);
+          h += "<span class='st'><span class='cre'>"+getCreneau(m.creneauId).label+"</span> "+escapeHtml(s2?s2.nom:"—")+
+               (m.signalement!=="aucun" ? " <span class='pill "+(m.signalement==="invalide"?"critique":"eleve")+"'>!</span>" : "")+"</span>";
+        });
+        h += "<span class='st'><span class='agent-testeur'>"+escapeHtml(agentLabel(t))+"</span> · "+
+             "<span class='agent-observateur'>"+escapeHtml(agentLabel(o))+"</span></span>";
+        h += "</div>";
       });
       h += "</div>";
     }
@@ -1403,20 +1584,33 @@ function renderPlanningTable(){
   var ms = cycleMissions().slice();
   ms.sort(function(a,b){
     if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    var ka = [a.testeurId,a.observateurId].sort().join("-"), kb = [b.testeurId,b.observateurId].sort().join("-");
+    if (ka !== kb) return ka < kb ? -1 : 1;
     return a.creneauId.localeCompare(b.creneauId);
   });
-  var rows = "<tr><th>Date</th><th>Jour</th><th>Créneau</th><th>Site</th><th>Prestataire</th>"+
+  var rows = "<tr><th>Date</th><th>Jour</th><th>Créneau</th><th>Plateforme</th><th>Site</th><th>Prestataire</th>"+
              "<th>Testeur</th><th>Observateur</th><th style='width:200px'>Reconnaissance</th></tr>";
   if (!ms.length){
-    rows += "<tr><td colspan='8' style='text-align:center;color:var(--text-dim);padding:22px'>Aucune mission — générez un cycle.</td></tr>";
+    rows += "<tr><td colspan='9' style='text-align:center' ;color:var(--text-dim);padding:22px'>Aucune mission — générez un cycle.</td></tr>";
   }
   ms.forEach(function(m){
     var t=getAgent(m.testeurId), o=getAgent(m.observateurId), s=getSite(m.siteId);
     var p = s?getPrestataire(s.prestataireId):null;
     rows += "<tr><td>"+formatDateFR(m.date)+"</td><td>"+JOURS_C[m.jour]+"</td>";
+    var pf = s ? getPlateforme(s.plateformeId) : null;
+    var nbJour = ms.filter(function(x){
+      return x.date===m.date && ((x.testeurId===m.testeurId && x.observateurId===m.observateurId));
+    }).length;
     rows += "<td>"+getCreneau(m.creneauId).label+(s&&s.nuit&&m.creneauId==="c5"?"<span class='tagnuit'>nuit</span>":"")+"</td>";
+    rows += "<td>"+escapeHtml(pf?pf.nom:"—")+(nbJour>1?"<span class='tagnuit'>"+(m.ordreJour||1)+"/"+nbJour+"</span>":"")+"</td>";
     rows += "<td><select onchange='reassignSite(\""+m.id+"\",this.value)'>";
-    STATE.sites.forEach(function(x){ rows += "<option value='"+x.id+"'"+(x.id===m.siteId?" selected":"")+">"+escapeHtml(x.nom)+"</option>"; });
+    STATE.plateformes.forEach(function(pfx){
+      var liste = STATE.sites.filter(function(x){ return x.plateformeId===pfx.id; });
+      if (!liste.length) return;
+      rows += "<optgroup label='"+escapeAttr(pfx.nom)+"'>";
+      liste.forEach(function(x){ rows += "<option value='"+x.id+"'"+(x.id===m.siteId?" selected":"")+">"+escapeHtml(x.nom)+"</option>"; });
+      rows += "</optgroup>";
+    });
     rows += "</select></td>";
     rows += "<td>"+escapeHtml(p?p.nom:"—")+"</td>";
     rows += "<td><span class='agent-testeur'>"+escapeHtml(agentLabel(t))+"</span> <span class='roleT'>T</span></td>";
@@ -1429,7 +1623,31 @@ function renderPlanningTable(){
 }
 function reassignSite(id,siteId){
   var m = STATE.planning.filter(function(x){return x.id===id;})[0];
-  if (m){ m.siteId = siteId; saveState(); renderExposition(); renderControles(); }
+  if (!m) return;
+  var nouveau = getSite(siteId);
+  // le binôme peut avoir d'autres missions le même jour : elles doivent rester sur la même plateforme
+  var memeJour = STATE.planning.filter(function(x){
+    return x.id!==m.id && x.date===m.date && x.testeurId===m.testeurId && x.observateurId===m.observateurId;
+  });
+  var conflit = memeJour.filter(function(x){
+    var s2 = getSite(x.siteId);
+    return s2 && nouveau && s2.plateformeId !== nouveau.plateformeId;
+  });
+  if (conflit.length){
+    var pf = getPlateforme(conflit[0].plateformeId || getSite(conflit[0].siteId).plateformeId);
+    if (!confirm("Ce binôme a déjà "+memeJour.length+" autre(s) mission(s) ce jour-là sur la plateforme « "+
+        (pf?pf.nom:"?")+" ». Ce changement lui ferait franchir une frontière de plateforme dans la journée. Confirmer quand même ?")) {
+      renderPlanning(); return;
+    }
+  }
+  if (memeJour.some(function(x){ return x.siteId === siteId; })){
+    if (!confirm("Ce binôme contrôle déjà ce site le même jour. Deux passages sur le même site dans la journée augmentent fortement le risque de reconnaissance. Confirmer quand même ?")){
+      renderPlanning(); return;
+    }
+  }
+  m.siteId = siteId;
+  if (nouveau) m.plateformeId = nouveau.plateformeId;
+  saveState(); renderPlanning(); renderExposition(); renderControles();
 }
 function setSignalement(id,val){
   var m = STATE.planning.filter(function(x){return x.id===id;})[0];
@@ -1527,13 +1745,15 @@ function renderRoles(){
 function renderSiteLoad(ms){
   var cnt = {};
   ms.forEach(function(m){ cnt[m.siteId]=(cnt[m.siteId]||0)+1; });
-  var rows = "<tr><th>Site</th><th>Prestataire</th><th>Missions (cycle)</th><th style='width:200px'></th></tr>";
+  var rows = "<tr><th>Site</th><th>Plateforme</th><th>Prestataire</th><th>Missions (cycle)</th><th style='width:200px'></th></tr>";
   var mx = 1;
   Object.keys(cnt).forEach(function(k){ if (cnt[k]>mx) mx=cnt[k]; });
   STATE.sites.forEach(function(s){
     var n = cnt[s.id]||0;
     var p = getPrestataire(s.prestataireId);
+    var pf = getPlateforme(s.plateformeId);
     rows += "<tr><td>"+escapeHtml(s.nom)+(s.nuit?"<span class='tagnuit'>nuit</span>":"")+"</td>"+
+      "<td style='color:var(--text-dim)'>"+escapeHtml(pf?pf.nom:"—")+"</td>"+
       "<td style='color:var(--text-dim)'>"+escapeHtml(p?p.nom:"—")+"</td><td>"+n+"</td>"+
       "<td><div class='bar'><i style='width:"+(n/mx*100)+"%'></i></div></td></tr>";
   });
@@ -1582,14 +1802,15 @@ function exportJSON(){
      "planning-"+new Date().toISOString().slice(0,10)+".json");
 }
 function exportCSV(){
-  var head = ["Date","Jour","Creneau","Site","Prestataire","Testeur","Observateur","Reconnaissance"];
+  var head = ["Date","Jour","Creneau","Plateforme","Site","Prestataire","Testeur","Observateur","Reconnaissance"];
   var lines = [head.join(";")];
   STATE.planning.filter(function(m){return m.cycleId===currentCycleId;})
     .sort(function(a,b){ return a.date<b.date?-1:(a.date>b.date?1:a.creneauId.localeCompare(b.creneauId)); })
     .forEach(function(m){
       var s=getSite(m.siteId), p=s?getPrestataire(s.prestataireId):null;
+      var pf = s?getPlateforme(s.plateformeId):null;
       lines.push([formatDateFR(m.date), JOURS[m.jour], getCreneau(m.creneauId).label,
-        s?s.nom:"", p?p.nom:"", agentLabel(getAgent(m.testeurId)), agentLabel(getAgent(m.observateurId)),
+        pf?pf.nom:"", s?s.nom:"", p?p.nom:"", agentLabel(getAgent(m.testeurId)), agentLabel(getAgent(m.observateurId)),
         byId(RECON_LEVELS,m.signalement).label].join(";"));
     });
   dl(new Blob(["\ufeff"+lines.join("\n")],{type:"text/csv;charset=utf-8"}), "planning-cycle.csv");
@@ -1633,7 +1854,7 @@ function switchTab(tab){
   if (tab==="controles")  renderControles();
 }
 function renderAll(){
-  renderHeader(); renderAgents(); renderSites(); renderPrestataires();
+  renderHeader(); renderAgents(); renderSites(); renderPlateformes(); renderPrestataires();
   renderCreneaux(); renderSeuils(); renderParams(); renderCapacite();
   renderCyclesList(); renderGenWarn(); renderCycleSelect(); renderPlanning();
   renderExposition(); renderControles();
@@ -1657,6 +1878,8 @@ document.addEventListener("DOMContentLoaded", function(){
   bindNum("inPoidsTesteur","poidsTesteur", function(){ renderCapacite(); renderExposition(); });
   bindNum("inPoidsObservateur","poidsObservateur", function(){ renderCapacite(); renderExposition(); });
   bindNum("inSeed","seed", null);
+  bindNum("inMaxDuoJour","maxMissionsDuoJour", function(){ renderParams(); });
+  bindChk("inRegrouper","regrouperJournee", function(){ renderParams(); });
   bindChk("inModeStrict","modeStrict", null);
   bindChk("inNuitReserve","nuitReserve", null);
   bindChk("inAnonymise","anonymise", function(){ renderAll(); });
