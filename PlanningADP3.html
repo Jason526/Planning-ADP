@@ -423,36 +423,38 @@ function defaultState(){
   for (i=1;i<=5;i++){  agents.push({id:"b"+i, nom:"Agent "+(9+i), code:"O-"+pad2(i), profil:"observateur", polyvalent:true}); }
 
   var prestataires = [
-    {id:"p1", nom:"Prestataire A"},
-    {id:"p2", nom:"Prestataire B"},
-    {id:"p3", nom:"Prestataire C"}
+    {id:"p1", nom:"HUBSAFE"},
+    {id:"p2", nom:"WATCHOVER"},
+    {id:"p3", nom:"SERIS"}
   ];
 
   // Une plateforme regroupe les sites entre lesquels un même binôme
   // peut se déplacer au cours d'une même journée.
   var plateformes = [
-    {id:"pf1", nom:"Orly / PARIF"},
+    {id:"pf1", nom:"Orly/PARIF"},
     {id:"pf2", nom:"CDG"},
     {id:"pf3", nom:"Le Bourget"}
   ];
 
   var sites = [
-    {id:"s1",  nom:"Orly 1",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
-    {id:"s2",  nom:"Orly 2",                     prestataireId:"p3", plateformeId:"pf1", nuit:false},
-    {id:"s3",  nom:"Orly 3",                     prestataireId:"p3", plateformeId:"pf1", nuit:false},
-    {id:"s4",  nom:"Orly 4",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
-    {id:"s15", nom:"Hors aérogares PARIF",       prestataireId:"p2", plateformeId:"pf1", nuit:false},
-    {id:"s5",  nom:"CDG 9 Terminal 1-3",         prestataireId:"p2", plateformeId:"pf2", nuit:false},
-    {id:"s6",  nom:"CDG 9 Terminal 2 AC 2 BD",   prestataireId:"p2", plateformeId:"pf2", nuit:false},
-    {id:"s7",  nom:"CDG Terminal 2E KLM",        prestataireId:"p3", plateformeId:"pf2", nuit:true},
-    {id:"s8",  nom:"CDG 9 Terminal 2F",          prestataireId:"p1", plateformeId:"pf2", nuit:false},
-    {id:"s9",  nom:"CDG 9 Terminal 2G",          prestataireId:"p1", plateformeId:"pf2", nuit:false},
-    {id:"s10", nom:"CDG 9 Terminal T2EF",        prestataireId:"p1", plateformeId:"pf2", nuit:true},
-    {id:"s11", nom:"CDG 9 HUB AF",               prestataireId:"p1", plateformeId:"pf2", nuit:false},
-    {id:"s16", nom:"CDG 9 Base Bus",             prestataireId:"p1", plateformeId:"pf2", nuit:false},
-    {id:"s12", nom:"CDGU",                       prestataireId:"p2", plateformeId:"pf2", nuit:false},
-    {id:"s13", nom:"ECP",                        prestataireId:"p1", plateformeId:"pf2", nuit:false},
-    {id:"s14", nom:"LBG",                        prestataireId:"p1", plateformeId:"pf3", nuit:false}
+    {id:"s1",  nom:"Orly 1",                     prestataireId:"p1", plateformeId:"pf1", nuit:false},
+    {id:"s2",  nom:"Orly 2",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
+    {id:"s3",  nom:"Orly 3",                     prestataireId:"p2", plateformeId:"pf1", nuit:false},
+    {id:"s4",  nom:"Orly 4",                     prestataireId:"p1", plateformeId:"pf1", nuit:false},
+    {id:"s15", nom:"Hors aérogares PARIF",       prestataireId:"p1", plateformeId:"pf1", nuit:false},
+    
+    {id:"s5",  nom:"CDG 9 Terminal 1-3",         prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s6",  nom:"CDG 9 Terminal 2 AC 2 BD",   prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s7",  nom:"CDG Terminal 2E KLM",        prestataireId:"p2", plateformeId:"pf2", nuit:true},
+    {id:"s8",  nom:"CDG 9 Terminal 2F",          prestataireId:"p3", plateformeId:"pf2", nuit:false},
+    {id:"s9",  nom:"CDG 9 Terminal 2G",          prestataireId:"p3", plateformeId:"pf2", nuit:false},
+    {id:"s10", nom:"CDG 9 Terminal T2EF",        prestataireId:"p3", plateformeId:"pf2", nuit:true},
+    {id:"s11", nom:"CDG 9 HUB AF",               prestataireId:"p3", plateformeId:"pf2", nuit:false},
+    {id:"s16", nom:"CDG 9 Base Bus",             prestataireId:"p3", plateformeId:"pf2", nuit:false},
+    {id:"s12", nom:"CDGU",                       prestataireId:"p1", plateformeId:"pf2", nuit:false},
+    {id:"s13", nom:"ECP",                        prestataireId:"p3", plateformeId:"pf2", nuit:false},
+    
+    {id:"s14", nom:"LBG",                        prestataireId:"p3", plateformeId:"pf3", nuit:false}
   ];
 
   return {
